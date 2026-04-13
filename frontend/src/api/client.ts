@@ -1,4 +1,5 @@
 import { env } from "../env";
+import { messageFromApiErrorBody } from "../lib/apiErrorMessage";
 
 import type {
   Device,
@@ -21,11 +22,11 @@ function buildUrl(path: string, params?: Record<string, string | undefined>): st
 }
 
 async function parseJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    throw new Error(messageFromApiErrorBody(res.status, text));
   }
-  return (await res.json()) as T;
+  return JSON.parse(text) as T;
 }
 
 export async function fetchDevices(
@@ -78,7 +79,7 @@ export async function addDeviceFavorite(token: string, deviceId: string): Promis
   });
   if (!res.ok && res.status !== 204) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    throw new Error(messageFromApiErrorBody(res.status, text));
   }
 }
 
@@ -89,7 +90,7 @@ export async function removeDeviceFavorite(token: string, deviceId: string): Pro
   });
   if (!res.ok && res.status !== 204) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    throw new Error(messageFromApiErrorBody(res.status, text));
   }
 }
 
@@ -135,6 +136,7 @@ export async function fetchReservations(
     from?: string;
     to?: string;
     include_cancelled?: boolean;
+    favorites_only?: boolean;
     page?: number;
     page_size?: PageSize;
   },
@@ -147,6 +149,7 @@ export async function fetchReservations(
       from: o.from,
       to: o.to,
       ...(o.include_cancelled ? { include_cancelled: "true" } : {}),
+      ...(o.favorites_only ? { favorites_only: "true" } : {}),
       ...(o.page !== undefined ? { page: String(o.page) } : {}),
       ...(o.page_size !== undefined ? { page_size: String(o.page_size) } : {}),
     }),
@@ -246,6 +249,17 @@ export async function createReservation(
   return parseJson<Reservation>(res);
 }
 
+export async function completeReservationUsage(
+  token: string,
+  reservationId: string,
+): Promise<Reservation> {
+  const res = await fetch(buildUrl(`/reservations/${reservationId}/complete-usage`), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseJson<Reservation>(res);
+}
+
 export async function deleteReservation(token: string, reservationId: string): Promise<void> {
   const res = await fetch(buildUrl(`/reservations/${reservationId}`), {
     method: "DELETE",
@@ -253,6 +267,6 @@ export async function deleteReservation(token: string, reservationId: string): P
   });
   if (!res.ok && res.status !== 204) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    throw new Error(messageFromApiErrorBody(res.status, text));
   }
 }

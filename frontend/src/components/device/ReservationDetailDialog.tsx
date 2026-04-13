@@ -3,12 +3,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { updateReservation } from "@/api/client";
 import type { Reservation } from "@/api/types";
 import { isoToDatetimeLocalValue, localDatetimeInputToIso } from "@/lib/datetimeLocal";
 
-const RESERVATION_STATUSES = ["confirmed", "cancelled", "completed"] as const;
+/** PUT では completed にできないため、編集フォームからは除外する。 */
+const EDITABLE_RESERVATION_STATUSES = ["confirmed", "cancelled"] as const;
 
 type ReservationDetailDialogProps = {
   open: boolean;
@@ -39,7 +41,12 @@ export function ReservationDetailDialog({
     setStartLocal(isoToDatetimeLocalValue(reservation.start_time));
     setEndLocal(isoToDatetimeLocalValue(reservation.end_time));
     setPurpose(reservation.purpose ?? "");
-    setStatus(reservation.status);
+    const s = reservation.status;
+    setStatus(
+      EDITABLE_RESERVATION_STATUSES.includes(s as (typeof EDITABLE_RESERVATION_STATUSES)[number])
+        ? s
+        : "confirmed",
+    );
     setFormError(null);
   }, [reservation, open]);
 
@@ -150,12 +157,19 @@ export function ReservationDetailDialog({
                       onChange={(e) => setStatus(e.target.value)}
                       className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
                     >
-                      {RESERVATION_STATUSES.map((s) => (
+                      {EDITABLE_RESERVATION_STATUSES.map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
                       ))}
                     </select>
+                    <p className="text-xs text-zinc-500">
+                      利用完了（completed）への変更は{" "}
+                      <Link to="/reservations/usage-complete" className="text-blue-800 underline">
+                        利用完了報告
+                      </Link>
+                      から行ってください。
+                    </p>
                   </label>
                   <label className="block space-y-1">
                     <span className="text-xs font-medium text-zinc-600">目的</span>

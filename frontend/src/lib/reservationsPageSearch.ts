@@ -6,6 +6,7 @@ export type ReservationsPageSearchState = {
   reservation_from: string;
   reservation_to: string;
   include_cancelled: boolean;
+  favorites_only: boolean;
   page: number;
   page_size: PageSize;
 };
@@ -27,6 +28,7 @@ export function parseReservationsPageSearch(search: string): ReservationsPageSea
     reservation_from: sp.get("reservation_from") ?? "",
     reservation_to: sp.get("reservation_to") ?? "",
     include_cancelled,
+    favorites_only: sp.get("favorites_only") === "1",
     page,
     page_size,
   };
@@ -39,6 +41,7 @@ export function serializeReservationsPageSearch(args: ReservationsPageSearchStat
   if (args.reservation_from.trim()) sp.set("reservation_from", args.reservation_from.trim());
   if (args.reservation_to.trim()) sp.set("reservation_to", args.reservation_to.trim());
   if (args.include_cancelled) sp.set("include_cancelled", "1");
+  if (args.favorites_only) sp.set("favorites_only", "1");
   if (args.page !== 1) sp.set("page", String(args.page));
   if (args.page_size !== 50) sp.set("page_size", String(args.page_size));
   const s = sp.toString();

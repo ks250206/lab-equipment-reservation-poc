@@ -3,13 +3,13 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..config import ReservationStatus
 from ..datetime_util import ensure_utc
-from ..models import Reservation
+from ..models import Reservation, UserFavoriteDevice
 from ..schemas import ReservationCreate, ReservationUpdate
 
 
@@ -155,6 +155,7 @@ async def list_reservations_for_user_paginated(
     window_start: datetime | None,
     window_end: datetime | None,
     include_cancelled: bool,
+    favorites_only: bool = False,
     page: int,
     page_size: int,
 ) -> tuple[list[Reservation], int]:
@@ -163,6 +164,13 @@ async def list_reservations_for_user_paginated(
 
     if device_id is not None:
         conds.append(Reservation.device_id == device_id)
+
+    if favorites_only:
+        fav_subq = select(1).select_from(UserFavoriteDevice).where(
+            UserFavoriteDevice.user_id == user_id,
+            UserFavoriteDevice.device_id == Reservation.device_id,
+        )
+        conds.append(exists(fav_subq))
 
     if status_filter is not None:
         conds.append(Reservation.status == status_filter)

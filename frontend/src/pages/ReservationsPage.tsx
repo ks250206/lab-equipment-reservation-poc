@@ -3,14 +3,9 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Pencil } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import {
-  createReservation,
-  deleteReservation,
-  fetchDevices,
-  fetchReservations,
-} from "@/api/client";
+import { deleteReservation, fetchDevices, fetchReservations } from "@/api/client";
 import type { PageSize, Reservation } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 import { ReservationDetailDialog } from "@/components/device/ReservationDetailDialog";
@@ -42,14 +37,9 @@ export function ReservationsPage() {
   const [filterFrom, setFilterFrom] = useState(initial.reservation_from);
   const [filterTo, setFilterTo] = useState(initial.reservation_to);
   const [includeCancelled, setIncludeCancelled] = useState(initial.include_cancelled);
+  const [favoritesOnly, setFavoritesOnly] = useState(initial.favorites_only);
   const [page, setPage] = useState(initial.page);
   const [pageSize, setPageSize] = useState<PageSize>(initial.page_size);
-
-  const [deviceId, setDeviceId] = useState("");
-  const [startLocal, setStartLocal] = useState("");
-  const [endLocal, setEndLocal] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
 
   const [editReservation, setEditReservation] = useState<Reservation | null>(null);
 
@@ -65,6 +55,7 @@ export function ReservationsPage() {
     setFilterFrom(p.reservation_from);
     setFilterTo(p.reservation_to);
     setIncludeCancelled(p.include_cancelled);
+    setFavoritesOnly(p.favorites_only);
     setPage(p.page);
     setPageSize(p.page_size);
   }, [authenticated, ready, locationRoute.search]);
@@ -77,6 +68,7 @@ export function ReservationsPage() {
       reservation_from: filterFrom,
       reservation_to: filterTo,
       include_cancelled: includeCancelled,
+      favorites_only: favoritesOnly,
       page,
       page_size: pageSize,
     });
@@ -89,6 +81,7 @@ export function ReservationsPage() {
     filterFrom,
     filterTo,
     includeCancelled,
+    favoritesOnly,
     page,
     pageSize,
     locationRoute.pathname,
@@ -100,7 +93,7 @@ export function ReservationsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filterDeviceId, filterStatus, filterFrom, filterTo, includeCancelled]);
+  }, [filterDeviceId, filterStatus, filterFrom, filterTo, includeCancelled, favoritesOnly]);
 
   useEffect(() => {
     setPage(1);
@@ -130,10 +123,20 @@ export function ReservationsPage() {
       from: fromIso,
       to: toIso,
       include_cancelled: includeCancelled,
+      favorites_only: favoritesOnly,
       page,
       page_size: pageSize,
     };
-  }, [filterDeviceId, filterStatus, filterFrom, filterTo, includeCancelled, page, pageSize]);
+  }, [
+    filterDeviceId,
+    filterStatus,
+    filterFrom,
+    filterTo,
+    includeCancelled,
+    favoritesOnly,
+    page,
+    pageSize,
+  ]);
 
   const devicesQuery = useQuery({
     queryKey: ["devices-for-reservation"],
@@ -165,30 +168,6 @@ export function ReservationsPage() {
     if (page > totalPages) setPage(totalPages);
   }, [reservationsQuery.isSuccess, reservationsQuery.data, page, pageSize]);
 
-  const createMut = useMutation({
-    mutationFn: async () => {
-      const token = await getValidToken();
-      if (!token) throw new Error("ログイン情報が無効です");
-      if (!deviceId || !startLocal || !endLocal) {
-        throw new Error("装置・開始・終了を入力してください");
-      }
-      return createReservation(token, {
-        device_id: deviceId,
-        start_time: localDatetimeInputToIso(startLocal),
-        end_time: localDatetimeInputToIso(endLocal),
-        purpose: purpose.trim() || undefined,
-      });
-    },
-    onSuccess: () => {
-      setFormError(null);
-      setPurpose("");
-      void queryClient.invalidateQueries({ queryKey: ["reservations"] });
-    },
-    onError: (e: Error) => {
-      setFormError(e.message);
-    },
-  });
-
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
       const token = await getValidToken();
@@ -208,7 +187,7 @@ export function ReservationsPage() {
     return (
       <div className="space-y-4">
         <h1 className="text-xl font-semibold">予約一覧</h1>
-        <p className="text-sm text-zinc-700">予約を表示・作成するにはログインが必要です。</p>
+        <p className="text-sm text-zinc-700">予約を表示するにはログインが必要です。</p>
         <button
           type="button"
           className="rounded border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50"
@@ -222,73 +201,20 @@ export function ReservationsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold">予約一覧</h1>
-
-      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-medium">新規予約</h2>
-        <form
-          className="grid max-w-xl gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setFormError(null);
-            createMut.mutate();
-          }}
-        >
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-zinc-700">装置</span>
-            <select
-              required
-              value={deviceId}
-              onChange={(e) => setDeviceId(e.target.value)}
-              className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-            >
-              <option value="">選択してください</option>
-              {devicesQuery.data?.items.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-zinc-700">開始</span>
-            <input
-              type="datetime-local"
-              required
-              value={startLocal}
-              onChange={(e) => setStartLocal(e.target.value)}
-              className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-zinc-700">終了</span>
-            <input
-              type="datetime-local"
-              required
-              value={endLocal}
-              onChange={(e) => setEndLocal(e.target.value)}
-              className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-zinc-700">目的（任意）</span>
-            <textarea
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              rows={2}
-              className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-            />
-          </label>
-          {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
-          <button
-            type="submit"
-            disabled={createMut.isPending}
-            className="w-fit rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
-          >
-            {createMut.isPending ? "送信中…" : "予約する"}
-          </button>
-        </form>
-      </section>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <h1 className="text-xl font-semibold">予約一覧</h1>
+        <p className="text-sm text-zinc-600">
+          新規の予約は{" "}
+          <Link to="/devices" className="text-blue-800 underline">
+            装置一覧
+          </Link>
+          から装置詳細のカレンダーで作成できます。利用完了の報告は{" "}
+          <Link to="/reservations/usage-complete" className="text-blue-800 underline">
+            利用完了報告
+          </Link>
+          から行ってください。
+        </p>
+      </div>
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">あなたの予約</h2>
@@ -331,6 +257,15 @@ export function ReservationsPage() {
               className="h-4 w-4 rounded border-zinc-300"
             />
             <span className="text-sm text-zinc-700">キャンセル済みも含める</span>
+          </label>
+          <label className="flex items-center gap-2 md:col-span-2">
+            <input
+              type="checkbox"
+              checked={favoritesOnly}
+              onChange={(e) => setFavoritesOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300"
+            />
+            <span className="text-sm text-zinc-700">お気に入り装置の予約のみ</span>
           </label>
           <label className="block space-y-1">
             <span className="text-sm font-medium text-zinc-700">期間・開始（ローカル）</span>
@@ -402,9 +337,7 @@ export function ReservationsPage() {
                         }
                         disabled={deleteMut.isPending || r.status === "completed"}
                         title={
-                          r.status === "completed"
-                            ? "完了済みの予約は削除できません"
-                            : undefined
+                          r.status === "completed" ? "完了済みの予約は削除できません" : undefined
                         }
                         onClick={() => {
                           if (r.status === "completed") return;

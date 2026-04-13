@@ -12,7 +12,7 @@ from app.auth import get_current_user
 from app.config import ReservationStatus, settings
 from app.db import Base, get_session
 from app.main import app
-from app.models import Device, Reservation, User
+from app.models import Device, Reservation, User, UserFavoriteDevice
 
 
 @pytest.fixture
@@ -445,3 +445,114 @@ async def test_list_reservations_unknown_device_404(reservation_client):
     client, _session, _owner = reservation_client
     r = await client.get("/api/reservations", params={"device_id": str(uuid.uuid4())})
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_post_complete_usage_success(reservation_client):
+    client, session, owner = reservation_client
+    device = Device(name="完了報告装置")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    created = await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(device.id),
+            "start_time": "2026-09-01T10:00:00Z",
+            "end_time": "2026-09-01T11:00:00Z",
+        },
+    )
+    assert created.status_code == 200
+    rid = created.json()["id"]
+
+    done = await client.post(f"/api/reservations/{rid}/complete-usage")
+    assert done.status_code == 200
+    assert done.json()["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_post_complete_usage_not_confirmed_returns_409(reservation_client):
+    client, session, owner = reservation_client
+    device = Device(name="完了報告409装置")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    row = Reservation(
+        device_id=device.id,
+        user_id=owner.id,
+        start_time=datetime(2026, 9, 2, 10, 0, tzinfo=UTC),
+        end_time=datetime(2026, 9, 2, 11, 0, tzinfo=UTC),
+        status=ReservationStatus.CANCELLED,
+    )
+    session.add(row)
+    await session.commit()
+    await session.refresh(row)
+
+    r = await client.post(f"/api/reservations/{row.id}/complete-usage")
+    assert r.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_put_reservation_status_completed_returns_409(reservation_client):
+    client, session, owner = reservation_client
+    device = Device(name="PUT完了禁止")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    created = await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(device.id),
+            "start_time": "2026-09-03T10:00:00Z",
+            "end_time": "2026-09-03T11:00:00Z",
+        },
+    )
+    assert created.status_code == 200
+    rid = created.json()["id"]
+
+    r = await client.put(f"/api/reservations/{rid}", json={"status": "completed"})
+    assert r.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_list_reservations_favorites_only_filters(reservation_client):
+    client, session, owner = reservation_client
+    fav_dev = Device(name="お気に入り装置")
+    other_dev = Device(name="その他装置")
+    session.add_all([fav_dev, other_dev])
+    await session.commit()
+    await session.refresh(fav_dev)
+    await session.refresh(other_dev)
+
+    session.add(UserFavoriteDevice(user_id=owner.id, device_id=fav_dev.id))
+    await session.commit()
+
+    await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(fav_dev.id),
+            "start_time": "2026-09-10T10:00:00Z",
+            "end_time": "2026-09-10T11:00:00Z",
+        },
+    )
+    await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(other_dev.id),
+            "start_time": "2026-09-11T10:00:00Z",
+            "end_time": "2026-09-11T11:00:00Z",
+        },
+    )
+
+    all_rows = await client.get("/api/reservations")
+    assert all_rows.status_code == 200
+    assert all_rows.json()["total"] == 2
+
+    fav_only = await client.get("/api/reservations", params={"favorites_only": "true"})
+    assert fav_only.status_code == 200
+    body = fav_only.json()
+    assert body["total"] == 1
+    assert body["items"][0]["device_id"] == str(fav_dev.id)

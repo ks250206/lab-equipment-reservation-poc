@@ -35,6 +35,12 @@ export function Layout() {
           <Link to="/reservations" className="text-blue-700 underline-offset-2 hover:underline">
             予約一覧
           </Link>
+          <Link
+            to="/reservations/usage-complete"
+            className="text-blue-700 underline-offset-2 hover:underline"
+          >
+            利用完了報告
+          </Link>
           {meQuery.data?.role === "admin" ? (
             <Link to="/admin/users" className="text-blue-700 underline-offset-2 hover:underline">
               ユーザー管理
