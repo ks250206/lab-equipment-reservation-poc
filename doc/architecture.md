@@ -22,7 +22,7 @@
 
 - **Python**: `uv` で依存管理・実行。`ruff` で lint / format。`ty check src/` で型チェック（厳密モードを前提とする）。
 - **TypeScript**: `tsc --noEmit`、`oxlint`、`oxfmt`。
-- **コンテナ**: `docker-compose` または互換ランタイムで Keycloak と PostgreSQL を起動。
+- **コンテナ**: 開発の既定は **Podman**（`podman-compose`）。Docker 利用時は `DEV_CONTAINER_RUNTIME=docker` で Keycloak と PostgreSQL を起動。
 - **Nix**: `flake.nix` による開発シェル（任意だがリポジトリの推奨環境）。シェルに **`just`** を含め、ルート [Justfile](../Justfile) で依存起動・開発・品質チェックを統一する（一覧は [@doc/development-guidelines.md](development-guidelines.md) 5.2）。
 
 ## 3. 技術的制約と要件

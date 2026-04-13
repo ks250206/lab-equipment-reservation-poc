@@ -2,8 +2,8 @@
 # `just` は flake の devShell に含める（`nix develop` 後に利用可能）。
 #
 # 依存コンテナ（PostgreSQL / Keycloak）:
-#   既定は Docker Compose v2（`docker compose`）。Podman の場合は
-#   `export DEV_CONTAINER_RUNTIME=podman` してから `just deps-up` 等を実行。
+#   既定は Podman（`podman-compose`）。実体は scripts/compose.sh。
+#   Docker に切り替える場合は `export DEV_CONTAINER_RUNTIME=docker`。
 
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
@@ -17,43 +17,19 @@ default:
 
 [group('deps')]
 deps-up:
-	#!/usr/bin/env bash
-	cd "{{root}}"
-	case "${DEV_CONTAINER_RUNTIME:-docker}" in
-	  docker) docker compose -f docker-compose.yml up -d ;;
-	  podman) podman-compose -f docker-compose.yml up -d ;;
-	  *) echo "DEV_CONTAINER_RUNTIME must be docker or podman"; exit 1 ;;
-	esac
+	bash "{{root}}/scripts/compose.sh" up -d
 
 [group('deps')]
 deps-down:
-	#!/usr/bin/env bash
-	cd "{{root}}"
-	case "${DEV_CONTAINER_RUNTIME:-docker}" in
-	  docker) docker compose -f docker-compose.yml down ;;
-	  podman) podman-compose -f docker-compose.yml down ;;
-	  *) echo "DEV_CONTAINER_RUNTIME must be docker or podman"; exit 1 ;;
-	esac
+	bash "{{root}}/scripts/compose.sh" down
 
 [group('deps')]
 deps-ps:
-	#!/usr/bin/env bash
-	cd "{{root}}"
-	case "${DEV_CONTAINER_RUNTIME:-docker}" in
-	  docker) docker compose -f docker-compose.yml ps ;;
-	  podman) podman-compose -f docker-compose.yml ps ;;
-	  *) echo "DEV_CONTAINER_RUNTIME must be docker or podman"; exit 1 ;;
-	esac
+	bash "{{root}}/scripts/compose.sh" ps
 
 [group('deps')]
 deps-logs *args:
-	#!/usr/bin/env bash
-	cd "{{root}}"
-	case "${DEV_CONTAINER_RUNTIME:-docker}" in
-	  docker) docker compose -f docker-compose.yml logs {{args}} ;;
-	  podman) podman-compose -f docker-compose.yml logs {{args}} ;;
-	  *) echo "DEV_CONTAINER_RUNTIME must be docker or podman"; exit 1 ;;
-	esac
+	bash "{{root}}/scripts/compose.sh" logs {{args}}
 
 # --- 初回セットアップ ---
 

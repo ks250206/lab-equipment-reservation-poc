@@ -69,8 +69,8 @@ pnpm run test
 | 用途 | コマンド例 |
 |------|------------|
 | レシピ一覧 | `just --list` |
-| 依存サービス起動 / 停止 | `just deps-up` / `just deps-down` |
-| Podman 利用時 | `export DEV_CONTAINER_RUNTIME=podman` のあと `just deps-up` 等 |
+| 依存サービス起動 / 停止 | `just deps-up` / `just deps-down`（**既定は Podman** / `podman-compose`） |
+| Docker のみ使う場合 | `export DEV_CONTAINER_RUNTIME=docker` のあと `just deps-up` 等 |
 | 初回セットアップ | `just setup` |
 | バックエンド開発 | `just backend-dev` |
 | フロント開発 | `just frontend-dev` |

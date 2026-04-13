@@ -26,7 +26,7 @@
             # Frontend
             nodejs_24
 
-            # Tools（`just` はルート Justfile 用。Podman 利用時は `DEV_CONTAINER_RUNTIME=podman`）
+            # Tools（`just` はルート Justfile 用。依存コンテナ既定は Podman＝`podman-compose`）
             podman
             podman-compose
             just

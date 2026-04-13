@@ -13,6 +13,7 @@ personal_space/
 ├── doc/                   # 恒久的設計ドキュメント（@doc/ で参照）
 ├── flake.nix
 ├── Justfile               # just: 依存起動・dev サーバ・品質チェック
+├── scripts/               # 例: compose.sh（Podman/Docker 切替）
 ├── .env                   # gitignore（ローカル秘密）
 ├── .env.example
 ├── docker-compose.yml

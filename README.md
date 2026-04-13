@@ -25,8 +25,8 @@
 cd personal_space
 nix develop          # シェルに just / uv / Node 等が入る
 just setup           # .env の雛形、uv sync、pnpm install（初回・環境変化時）
-just deps-up         # PostgreSQL + Keycloak（既定: docker compose）
-# Podman の場合: export DEV_CONTAINER_RUNTIME=podman
+just deps-up         # PostgreSQL + Keycloak（既定: podman-compose）
+# Docker の場合: export DEV_CONTAINER_RUNTIME=docker
 just backend-dev     # 別ターミナル推奨
 just frontend-dev    # http://localhost:5173
 ```
@@ -41,8 +41,9 @@ just frontend-dev    # http://localhost:5173
 
 ```bash
 cd personal_space
-docker compose -f docker-compose.yml up -d
-# または: podman-compose -f docker-compose.yml up -d
+podman-compose -f docker-compose.yml up -d
+# または: just deps-up（同じく Podman 既定）
+# Docker のみ使う場合: export DEV_CONTAINER_RUNTIME=docker && just deps-up
 ```
 
 #### 2. Nix 開発環境に入る
@@ -112,6 +113,7 @@ personal_space/
 ├── doc/               # 恒久的ドキュメント（要求・設計・アーキテクチャ等）
 ├── README.md          # このファイル
 ├── Justfile           # just タスクランナー（起動・品質チェック）
+├── scripts/           # compose 実行ラッパー等（just から呼ぶ）
 ├── flake.nix          # Nix 環境定義（just / uv / podman-compose 等）
 ├── docker-compose.yml # Keycloak + PostgreSQL
 ├── steering/          # イテレーション作業（README と iterations/）
