@@ -1,9 +1,10 @@
-import type { DateSelectArg, DatesSetArg, EventClickArg } from "@fullcalendar/core";
+import type { DateSelectArg, DatesSetArg, EventClickArg, EventMountArg } from "@fullcalendar/core";
 import jaLocale from "@fullcalendar/core/locales/ja.js";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import { Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -143,6 +144,14 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
     setModalEditable(Boolean(ext.isMine));
   }, []);
 
+  const onEventDidMount = useCallback((arg: EventMountArg) => {
+    const ext = arg.event.extendedProps as DeviceReservationCalendarExtendedProps;
+    const tip = ext?.tooltipTitle;
+    if (tip) {
+      arg.el.setAttribute("title", tip);
+    }
+  }, []);
+
   const onSelect = useCallback((selectInfo: DateSelectArg) => {
     selectInfo.view.calendar.unselect();
     try {
@@ -280,12 +289,15 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
                   <th className="border-b border-zinc-200 px-3 py-2 font-medium">目的</th>
                   <th className="border-b border-zinc-200 px-3 py-2 font-medium">氏名</th>
                   <th className="border-b border-zinc-200 px-3 py-2 font-medium">メール</th>
+                  <th className="w-14 border-b border-zinc-200 px-2 py-2 text-center font-medium">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {listReservationsQuery.data.items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-zinc-500">
+                    <td colSpan={7} className="px-3 py-6 text-center text-zinc-500">
                       この期間に予約はありません。
                     </td>
                   </tr>
@@ -315,6 +327,19 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
                         <td className="border-b border-zinc-100 px-3 py-2 break-all text-xs text-zinc-700">
                           {r.user_email?.trim() ? r.user_email.trim() : "—"}
                         </td>
+                        <td className="border-b border-zinc-100 px-2 py-2 text-center">
+                          <button
+                            type="button"
+                            className="inline-flex rounded border border-zinc-300 bg-white p-1.5 text-zinc-700 hover:bg-zinc-50"
+                            aria-label={mine ? "自分の予約を編集" : "予約の詳細"}
+                            onClick={() => {
+                              setModalReservation(r);
+                              setModalEditable(mine);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" aria-hidden />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })
@@ -343,6 +368,7 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
             datesSet={onDatesSet}
             events={calendarEvents}
             eventClick={onEventClick}
+            eventDidMount={onEventDidMount}
             views={{
               dayGridMonth: {
                 dayMaxEvents: 3,

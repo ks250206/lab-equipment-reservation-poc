@@ -132,6 +132,55 @@ async def list_reservations_for_device_in_window_paginated(
     return list(result.scalars().all()), total
 
 
+async def list_reservations_for_user_paginated(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    device_id: uuid.UUID | None,
+    status_filter: ReservationStatus | None,
+    window_start: datetime | None,
+    window_end: datetime | None,
+    include_cancelled: bool,
+    page: int,
+    page_size: int,
+) -> tuple[list[Reservation], int]:
+    """ログインユーザーの予約をページング。`window_*` は両方指定時のみ窓で重なり判定。"""
+    conds: list[Any] = [Reservation.user_id == user_id]
+
+    if device_id is not None:
+        conds.append(Reservation.device_id == device_id)
+
+    if status_filter is not None:
+        conds.append(Reservation.status == status_filter)
+    elif not include_cancelled:
+        conds.append(Reservation.status != ReservationStatus.CANCELLED)
+
+    if window_start is not None and window_end is not None:
+        ws = ensure_utc(window_start)
+        we = ensure_utc(window_end)
+        conds.extend(
+            [
+                Reservation.end_time > ws,
+                Reservation.start_time < we,
+            ]
+        )
+
+    where_expr = and_(*conds)
+    count_stmt = select(func.count()).select_from(Reservation).where(where_expr)
+    total = int(await session.scalar(count_stmt) or 0)
+    offset = (page - 1) * page_size
+    list_stmt = (
+        select(Reservation)
+        .where(where_expr)
+        .options(selectinload(Reservation.user))
+        .order_by(Reservation.start_time.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    result = await session.execute(list_stmt)
+    return list(result.scalars().all()), total
+
+
 async def update_reservation(
     session: AsyncSession,
     reservation: Reservation,

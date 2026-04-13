@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Reservation } from "../src/api/types";
 import {
+  reservationCalendarTooltipTitle,
   reservationDisplayName,
   reservationsToFullCalendarEvents,
 } from "../src/lib/deviceReservationCalendar";
@@ -28,7 +29,7 @@ describe("reservationsToFullCalendarEvents", () => {
     process.env.TZ = prevTz;
   });
 
-  it("目的ではなく時刻レンジと氏名をタイトルにする", () => {
+  it("表示タイトルは氏名のみ", () => {
     const events = reservationsToFullCalendarEvents([
       {
         ...baseReservation,
@@ -36,29 +37,38 @@ describe("reservationsToFullCalendarEvents", () => {
         user_email: "yamada@example.com",
       },
     ]);
-    expect(events[0]?.title).toBe("10:00–11:00 山田");
+    expect(events[0]?.title).toBe("山田");
   });
 
   it("氏名が空のときメールをタイトルに含める", () => {
     const events = reservationsToFullCalendarEvents([
       { ...baseReservation, user_name: null, user_email: "only@example.com" },
     ]);
-    expect(events[0]?.title).toBe("10:00–11:00 only@example.com");
+    expect(events[0]?.title).toBe("only@example.com");
   });
 
   it("氏名・メールが空のときフォールバック文言", () => {
     const events = reservationsToFullCalendarEvents([
       { ...baseReservation, user_name: null, user_email: null },
     ]);
-    expect(events[0]?.title).toBe("10:00–11:00 （名前なし）");
+    expect(events[0]?.title).toBe("（名前なし）");
   });
 
-  it("extendedProps に予約と isMine を載せる", () => {
+  it("extendedProps に予約・isMine・tooltipTitle（時刻+氏名）を載せる", () => {
     const mineId = baseReservation.user_id;
-    const events = reservationsToFullCalendarEvents([baseReservation], mineId);
-    expect(events[0]?.extendedProps).toEqual({
-      reservation: baseReservation,
+    const events = reservationsToFullCalendarEvents(
+      [
+        {
+          ...baseReservation,
+          user_name: "山田",
+          user_email: "yamada@example.com",
+        },
+      ],
+      mineId,
+    );
+    expect(events[0]?.extendedProps).toMatchObject({
       isMine: true,
+      tooltipTitle: "10:00–11:00 山田",
     });
   });
 
@@ -80,5 +90,17 @@ describe("reservationDisplayName", () => {
         user_email: "sato@example.com",
       }),
     ).toBe("佐藤");
+  });
+});
+
+describe("reservationCalendarTooltipTitle", () => {
+  it("ホバー用に時刻レンジと表示名を結合する", () => {
+    expect(
+      reservationCalendarTooltipTitle({
+        ...baseReservation,
+        user_name: "山田",
+        user_email: "yamada@example.com",
+      }),
+    ).toBe("10:00–11:00 山田");
   });
 });

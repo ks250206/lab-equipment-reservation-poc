@@ -63,8 +63,8 @@ export function DeviceDetailPage() {
   const hasImage = d.has_image ?? false;
 
   return (
-    <div className="space-y-6 md:flex md:items-start md:gap-8">
-      <div className="min-w-0 flex-1 space-y-4">
+    <div className="space-y-6">
+      <div className="space-y-4">
         <nav aria-label="パンくずリスト" className="text-sm text-zinc-600">
           <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
             <li>
@@ -96,7 +96,10 @@ export function DeviceDetailPage() {
           </ol>
         </nav>
         <h1 className="text-2xl font-semibold">{d.name}</h1>
-        <dl className="grid max-w-xl gap-2 text-sm md:grid-cols-3">
+      </div>
+
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+        <dl className="grid min-w-0 flex-1 gap-2 text-sm sm:max-w-xl md:grid-cols-3">
           <dt className="font-medium text-zinc-600">ステータス</dt>
           <dd className="md:col-span-2">{d.status}</dd>
           <dt className="font-medium text-zinc-600">カテゴリ</dt>
@@ -132,44 +135,49 @@ export function DeviceDetailPage() {
             {format(new Date(d.updated_at), "PPpp", { locale: ja })}
           </dd>
         </dl>
-        <DeviceReservationsSection deviceId={deviceId} />
+
+        <aside className="w-full shrink-0 space-y-3 md:sticky md:top-4 md:w-72">
+          <h2 className="text-sm font-medium text-zinc-700">装置写真</h2>
+          <DeviceImageSlot
+            deviceId={deviceId}
+            hasImage={hasImage}
+            cacheBust={d.updated_at}
+            className="aspect-square w-full max-w-sm md:max-w-none"
+          />
+          {isAdmin && authenticated && ready ? (
+            <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm">
+              <label className="block space-y-1">
+                <span className="font-medium text-zinc-700">
+                  画像を更新（PNG / JPEG、最大 2MB）
+                </span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  disabled={uploadMut.isPending}
+                  className="w-full text-xs file:mr-2 file:rounded file:border file:border-zinc-300 file:bg-white file:px-2 file:py-1"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) uploadMut.mutate(f);
+                  }}
+                />
+              </label>
+              {uploadMut.isError ? (
+                <p className="text-xs text-red-700">
+                  {uploadMut.error instanceof Error
+                    ? uploadMut.error.message
+                    : "アップロードに失敗しました"}
+                </p>
+              ) : null}
+              {uploadMut.isPending ? (
+                <p className="text-xs text-zinc-600">アップロード中…</p>
+              ) : null}
+            </div>
+          ) : null}
+        </aside>
       </div>
 
-      <aside className="w-full shrink-0 space-y-3 md:sticky md:top-4 md:w-72">
-        <h2 className="text-sm font-medium text-zinc-700">装置写真</h2>
-        <DeviceImageSlot
-          deviceId={deviceId}
-          hasImage={hasImage}
-          cacheBust={d.updated_at}
-          className="aspect-square w-full max-w-sm md:max-w-none"
-        />
-        {isAdmin && authenticated && ready ? (
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm">
-            <label className="block space-y-1">
-              <span className="font-medium text-zinc-700">画像を更新（PNG / JPEG、最大 2MB）</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg"
-                disabled={uploadMut.isPending}
-                className="w-full text-xs file:mr-2 file:rounded file:border file:border-zinc-300 file:bg-white file:px-2 file:py-1"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (f) uploadMut.mutate(f);
-                }}
-              />
-            </label>
-            {uploadMut.isError ? (
-              <p className="text-xs text-red-700">
-                {uploadMut.error instanceof Error
-                  ? uploadMut.error.message
-                  : "アップロードに失敗しました"}
-              </p>
-            ) : null}
-            {uploadMut.isPending ? <p className="text-xs text-zinc-600">アップロード中…</p> : null}
-          </div>
-        ) : null}
-      </aside>
+      <DeviceReservationsSection deviceId={deviceId} />
     </div>
   );
 }

@@ -93,11 +93,32 @@ export async function fetchUsersAdmin(token: string): Promise<UserDirectoryRow[]
   return parseJson<UserDirectoryRow[]>(res);
 }
 
-export async function fetchReservations(token: string): Promise<Reservation[]> {
-  const res = await fetch(buildUrl("/reservations"), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return parseJson<Reservation[]>(res);
+export async function fetchReservations(
+  token: string,
+  opts?: {
+    device_id?: string;
+    reservation_status?: string;
+    from?: string;
+    to?: string;
+    include_cancelled?: boolean;
+    page?: number;
+    page_size?: PageSize;
+  },
+): Promise<Paginated<Reservation>> {
+  const o = opts ?? {};
+  const res = await fetch(
+    buildUrl("/reservations", {
+      device_id: o.device_id,
+      reservation_status: o.reservation_status,
+      from: o.from,
+      to: o.to,
+      ...(o.include_cancelled ? { include_cancelled: "true" } : {}),
+      ...(o.page !== undefined ? { page: String(o.page) } : {}),
+      ...(o.page_size !== undefined ? { page_size: String(o.page_size) } : {}),
+    }),
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  return parseJson<Paginated<Reservation>>(res);
 }
 
 export async function fetchDeviceReservations(

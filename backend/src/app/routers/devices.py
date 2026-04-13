@@ -1,7 +1,6 @@
 import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
-from enum import IntEnum
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,14 +9,15 @@ from starlette.responses import Response
 from ..auth import get_current_user, require_admin
 from ..config import DeviceStatus, get_settings
 from ..db import get_session
-from ..models import Reservation, User
+from ..models import User
+from ..pagination import ListPageSize
+from ..reservation_mapping import reservation_to_response
 from ..schemas import (
     DeviceCreate,
     DeviceResponse,
     DeviceUpdate,
     PaginatedDeviceListResponse,
     PaginatedReservationListResponse,
-    ReservationResponse,
     device_to_response,
 )
 from ..services import (
@@ -47,31 +47,6 @@ from ..storage.s3_device_images import (
 router = APIRouter(prefix="/api/devices", tags=["devices"])
 
 _DEFAULT_WINDOW = timedelta(days=183)
-
-
-def _reservation_to_response(row: Reservation) -> ReservationResponse:
-    u = row.user
-    status_val = row.status.value if hasattr(row.status, "value") else str(row.status)
-    return ReservationResponse(
-        id=row.id,
-        device_id=row.device_id,
-        user_id=row.user_id,
-        start_time=row.start_time,
-        end_time=row.end_time,
-        purpose=row.purpose,
-        status=status_val,
-        created_at=row.created_at,
-        user_name=u.name if u is not None else None,
-        user_email=u.email if u is not None else None,
-    )
-
-
-class ListPageSize(IntEnum):
-    """一覧 API の page_size（クエリ文字列からの解釈用）。"""
-
-    TWENTY = 20
-    FIFTY = 50
-    HUNDRED = 100
 
 
 @router.get("", response_model=PaginatedDeviceListResponse)
@@ -180,7 +155,7 @@ async def list_device_reservations(
         page_size=int(page_size),
     )
     return PaginatedReservationListResponse(
-        items=[_reservation_to_response(r) for r in items],
+        items=[reservation_to_response(r) for r in items],
         total=total,
         page=page,
         page_size=int(page_size),

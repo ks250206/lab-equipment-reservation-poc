@@ -1,39 +1,91 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { fetchDevices, fetchFacets } from "@/api/client";
 import type { Device, PageSize } from "@/api/types";
 import { DeviceImageSlot } from "@/components/device/DeviceImageSlot";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import {
+  parseDevicesPageSearch,
+  serializeDevicesPageSearch,
+  type DeviceListViewMode,
+} from "@/lib/devicesPageSearch";
 import { localDatetimeInputToIso } from "@/lib/datetimeLocal";
-
-type DeviceListViewMode = "list" | "detail" | "thumbnail";
+import { urlSearchEqual } from "@/lib/urlSearchEqual";
 
 export function DevicesPage() {
   const locationRoute = useLocation();
-  const [rawQuery, setRawQuery] = useState("");
+  const navigate = useNavigate();
+  const skipHydrateFromUrl = useRef(false);
+
+  const initial = parseDevicesPageSearch(locationRoute.search);
+  const [rawQuery, setRawQuery] = useState(initial.q);
   const [composition, setComposition] = useState(false);
-  const [category, setCategory] = useState("");
-  const [location, setLocation] = useState("");
-  const [status, setStatus] = useState("");
-  const [rawReservationUser, setRawReservationUser] = useState("");
+  const [category, setCategory] = useState(initial.category);
+  const [location, setLocation] = useState(initial.location);
+  const [status, setStatus] = useState(initial.status);
+  const [rawReservationUser, setRawReservationUser] = useState(initial.reservation_user);
   const [resUserComposition, setResUserComposition] = useState(false);
-  const [reservationFrom, setReservationFrom] = useState("");
-  const [reservationTo, setReservationTo] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageSize>(50);
-  const [listView, setListView] = useState<DeviceListViewMode>("thumbnail");
+  const [reservationFrom, setReservationFrom] = useState(initial.reservation_from);
+  const [reservationTo, setReservationTo] = useState(initial.reservation_to);
+  const [page, setPage] = useState(initial.page);
+  const [pageSize, setPageSize] = useState<PageSize>(initial.page_size);
+  const [listView, setListView] = useState<DeviceListViewMode>(initial.view);
 
   const debouncedQuery = useDebouncedValue(rawQuery, composition);
   const debouncedReservationUser = useDebouncedValue(rawReservationUser, resUserComposition);
 
   useEffect(() => {
-    const sp = new URLSearchParams(locationRoute.search);
-    setCategory(sp.get("category") ?? "");
-    setLocation(sp.get("location") ?? "");
+    if (skipHydrateFromUrl.current) {
+      skipHydrateFromUrl.current = false;
+      return;
+    }
+    const p = parseDevicesPageSearch(locationRoute.search);
+    setCategory(p.category);
+    setLocation(p.location);
+    setRawQuery(p.q);
+    setStatus(p.status);
+    setRawReservationUser(p.reservation_user);
+    setReservationFrom(p.reservation_from);
+    setReservationTo(p.reservation_to);
+    setPage(p.page);
+    setPageSize(p.page_size);
+    setListView(p.view);
   }, [locationRoute.search]);
+
+  useEffect(() => {
+    const next = serializeDevicesPageSearch({
+      q: debouncedQuery,
+      category,
+      location,
+      status,
+      reservation_user: debouncedReservationUser,
+      reservation_from: reservationFrom,
+      reservation_to: reservationTo,
+      page,
+      page_size: pageSize,
+      view: listView,
+    });
+    if (urlSearchEqual(next, locationRoute.search)) return;
+    skipHydrateFromUrl.current = true;
+    navigate({ pathname: locationRoute.pathname, search: next }, { replace: true });
+  }, [
+    debouncedQuery,
+    category,
+    location,
+    status,
+    debouncedReservationUser,
+    reservationFrom,
+    reservationTo,
+    page,
+    pageSize,
+    listView,
+    locationRoute.pathname,
+    locationRoute.search,
+    navigate,
+  ]);
 
   useEffect(() => {
     setPage(1);

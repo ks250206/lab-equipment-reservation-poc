@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,8 +10,15 @@ from ..config import ReservationStatus
 from ..datetime_util import ensure_utc
 from ..db import get_session
 from ..models import Device, Reservation, User
-from ..schemas import ReservationCreate, ReservationResponse, ReservationUpdate
-from ..services.reservations import check_time_overlap
+from ..pagination import ListPageSize
+from ..reservation_mapping import reservation_to_response
+from ..schemas import (
+    PaginatedReservationListResponse,
+    ReservationCreate,
+    ReservationResponse,
+    ReservationUpdate,
+)
+from ..services.reservations import check_time_overlap, list_reservations_for_user_paginated
 
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
 
@@ -22,15 +29,75 @@ def _status_str(value: ReservationStatus | str) -> str:
     return value.value
 
 
-@router.get("", response_model=list[ReservationResponse])
+@router.get("", response_model=PaginatedReservationListResponse)
 async def list_reservations(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
-) -> list[Reservation]:
-    result = await session.execute(
-        select(Reservation).where(Reservation.user_id == current_user.id)
+    device_id: str | None = Query(None, description="装置 ID で絞り込み"),
+    reservation_status: str | None = Query(None, description="予約ステータスで絞り込み"),
+    from_: datetime | None = Query(None, alias="from"),
+    to: datetime | None = Query(None),
+    include_cancelled: bool = Query(False),
+    page: int = Query(1, ge=1, description="1 始まりのページ番号"),
+    page_size: ListPageSize = Query(
+        ListPageSize.FIFTY, description="1 ページあたり件数（20 / 50 / 100）"
+    ),
+) -> PaginatedReservationListResponse:
+    if (from_ is None) != (to is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Query parameters 'from' and 'to' must be used together",
+        )
+    if from_ is not None and to is not None:
+        if from_ >= to:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="'from' must be before 'to'",
+            )
+
+    dev_uuid: UUID | None = None
+    if device_id is not None:
+        try:
+            dev_uuid = UUID(device_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid device ID format",
+            ) from None
+        dev_row = await session.get(Device, dev_uuid)
+        if dev_row is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Device not found",
+            )
+
+    status_enum: ReservationStatus | None = None
+    if reservation_status is not None:
+        try:
+            status_enum = ReservationStatus(reservation_status)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid reservation status: {reservation_status}",
+            ) from None
+
+    items, total = await list_reservations_for_user_paginated(
+        session,
+        current_user.id,
+        device_id=dev_uuid,
+        status_filter=status_enum,
+        window_start=ensure_utc(from_) if from_ is not None else None,
+        window_end=ensure_utc(to) if to is not None else None,
+        include_cancelled=include_cancelled,
+        page=page,
+        page_size=int(page_size),
     )
-    return list(result.scalars().all())
+    return PaginatedReservationListResponse(
+        items=[reservation_to_response(r) for r in items],
+        total=total,
+        page=page,
+        page_size=int(page_size),
+    )
 
 
 @router.post("", response_model=ReservationResponse)

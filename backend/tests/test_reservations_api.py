@@ -220,9 +220,11 @@ async def test_list_reservations_only_own(reservation_client):
 
     listed = await client.get("/api/reservations")
     assert listed.status_code == 200
-    rows = listed.json()
-    assert len(rows) == 1
-    assert rows[0]["user_id"] == str(owner.id)
+    body = listed.json()
+    assert body["total"] == 1
+    assert body["page"] == 1
+    assert len(body["items"]) == 1
+    assert body["items"][0]["user_id"] == str(owner.id)
 
 
 @pytest.mark.asyncio
@@ -304,4 +306,95 @@ async def test_delete_reservation_invalid_id_400(reservation_client):
 async def test_delete_reservation_not_found_404(reservation_client):
     client, _session, _owner = reservation_client
     r = await client.delete(f"/api/reservations/{uuid.uuid4()}")
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_reservations_filter_by_device(reservation_client):
+    client, session, _owner = reservation_client
+    d1 = Device(name="D1")
+    d2 = Device(name="D2")
+    session.add_all([d1, d2])
+    await session.commit()
+    await session.refresh(d1)
+    await session.refresh(d2)
+
+    await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(d1.id),
+            "start_time": "2026-04-20T10:00:00Z",
+            "end_time": "2026-04-20T11:00:00Z",
+        },
+    )
+    await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(d2.id),
+            "start_time": "2026-04-21T10:00:00Z",
+            "end_time": "2026-04-21T11:00:00Z",
+        },
+    )
+
+    r = await client.get("/api/reservations", params={"device_id": str(d1.id)})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 1
+    assert body["items"][0]["device_id"] == str(d1.id)
+
+
+@pytest.mark.asyncio
+async def test_list_reservations_from_to_window(reservation_client):
+    client, session, owner = reservation_client
+    device = Device(name="窓装置")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(device.id),
+            "start_time": "2026-05-10T12:00:00Z",
+            "end_time": "2026-05-10T13:00:00Z",
+        },
+    )
+    await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(device.id),
+            "start_time": "2026-06-01T12:00:00Z",
+            "end_time": "2026-06-01T13:00:00Z",
+        },
+    )
+
+    r = await client.get(
+        "/api/reservations",
+        params={
+            "from": "2026-05-01T00:00:00Z",
+            "to": "2026-05-31T23:59:59Z",
+        },
+    )
+    assert r.status_code == 200
+    assert r.json()["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_list_reservations_from_without_to_400(reservation_client):
+    client, _session, _owner = reservation_client
+    r = await client.get("/api/reservations", params={"from": "2026-05-01T00:00:00Z"})
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_list_reservations_invalid_status_422(reservation_client):
+    client, _session, _owner = reservation_client
+    r = await client.get("/api/reservations", params={"reservation_status": "not-a-status"})
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_reservations_unknown_device_404(reservation_client):
+    client, _session, _owner = reservation_client
+    r = await client.get("/api/reservations", params={"device_id": str(uuid.uuid4())})
     assert r.status_code == 404

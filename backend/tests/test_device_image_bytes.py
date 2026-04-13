@@ -4,6 +4,8 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
+from app.seeding.dev_seed import SEED_DEVICE_IDS
+from app.seeding.device_image_seed import build_seed_png_bytes_for_device
 from app.services.device_image_bytes import validate_device_image_bytes
 
 _MINI_PNG = base64.b64decode(
@@ -41,3 +43,13 @@ def test_validate_rejects_oversize(monkeypatch):
     monkeypatch.setattr("app.services.device_image_bytes.get_settings", lambda: _S())
     with pytest.raises(ValueError, match="上限"):
         validate_device_image_bytes(_MINI_PNG)
+
+
+def test_build_seed_png_bytes_distinct_per_device_and_valid():
+    a, b = SEED_DEVICE_IDS[0], SEED_DEVICE_IDS[1]
+    ba = build_seed_png_bytes_for_device(a)
+    bb = build_seed_png_bytes_for_device(b)
+    assert ba != bb
+    assert validate_device_image_bytes(ba) == "image/png"
+    assert validate_device_image_bytes(bb) == "image/png"
+    assert build_seed_png_bytes_for_device(a) == ba
