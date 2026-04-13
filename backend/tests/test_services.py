@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -128,8 +128,8 @@ class TestReservationService:
             session,
             ReservationCreate(
                 device_id=device.id,
-                start_time=datetime(2026, 4, 15, 10, 0),
-                end_time=datetime(2026, 4, 15, 12, 0),
+                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
+                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
                 purpose="テスト目的",
             ),
             user.id,
@@ -160,8 +160,8 @@ class TestReservationService:
             session,
             ReservationCreate(
                 device_id=device.id,
-                start_time=datetime(2026, 4, 15, 10, 0),
-                end_time=datetime(2026, 4, 15, 12, 0),
+                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
+                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
             ),
             user.id,
         )
@@ -169,8 +169,8 @@ class TestReservationService:
         overlap = await check_time_overlap(
             session,
             device.id,
-            datetime(2026, 4, 15, 11, 0),
-            datetime(2026, 4, 15, 13, 0),
+            datetime(2026, 4, 15, 11, 0, tzinfo=timezone.utc),
+            datetime(2026, 4, 15, 13, 0, tzinfo=timezone.utc),
         )
 
         assert overlap is True
@@ -178,8 +178,8 @@ class TestReservationService:
         no_overlap = await check_time_overlap(
             session,
             device.id,
-            datetime(2026, 4, 15, 14, 0),
-            datetime(2026, 4, 15, 16, 0),
+            datetime(2026, 4, 15, 14, 0, tzinfo=timezone.utc),
+            datetime(2026, 4, 15, 16, 0, tzinfo=timezone.utc),
         )
 
         assert no_overlap is False
@@ -202,8 +202,8 @@ class TestReservationService:
             session,
             ReservationCreate(
                 device_id=device.id,
-                start_time=datetime(2026, 4, 15, 10, 0),
-                end_time=datetime(2026, 4, 15, 12, 0),
+                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
+                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
             ),
             user.id,
         )

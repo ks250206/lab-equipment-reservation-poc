@@ -6,6 +6,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import ReservationStatus
+from ..datetime_util import ensure_utc
 from ..models import Reservation
 from ..schemas import ReservationCreate, ReservationUpdate
 
@@ -19,8 +20,8 @@ async def create_reservation(
     reservation = Reservation(
         device_id=data["device_id"],
         user_id=user_id,
-        start_time=data["start_time"],
-        end_time=data["end_time"],
+        start_time=ensure_utc(data["start_time"]),
+        end_time=ensure_utc(data["end_time"]),
         purpose=data.get("purpose"),
     )
     session.add(reservation)
@@ -60,6 +61,8 @@ async def update_reservation(
 ) -> Reservation:
     update_dict = reservation_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
+        if key in ("start_time", "end_time") and isinstance(value, datetime):
+            value = ensure_utc(value)
         setattr(reservation, key, value)
     await session.commit()
     await session.refresh(reservation)
@@ -81,6 +84,8 @@ async def check_time_overlap(
     end_time: datetime,
     exclude_reservation_id: uuid.UUID | None = None,
 ) -> bool:
+    start_time = ensure_utc(start_time)
+    end_time = ensure_utc(end_time)
     query = select(Reservation).where(
         and_(
             Reservation.device_id == device_id,

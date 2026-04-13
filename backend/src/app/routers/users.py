@@ -21,7 +21,7 @@ async def list_users(
     admin: User = Depends(require_admin),
 ) -> list[User]:
     result = await session.execute(select(User))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.get("/{user_id}", response_model=UserResponse)

@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..config import ReservationStatus
+from ..datetime_util import ensure_utc
 from ..db import get_session
 from ..models import Device, Reservation, User
 from ..schemas import ReservationCreate, ReservationResponse, ReservationUpdate
@@ -49,7 +51,11 @@ async def create_reservation(
             detail="Device not found",
         )
 
-    if reservation_data.start_time >= reservation_data.end_time:
+    payload = reservation_data.model_dump()
+    start_utc = ensure_utc(payload["start_time"])
+    end_utc = ensure_utc(payload["end_time"])
+
+    if start_utc >= end_utc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Start time must be before end time",
@@ -58,8 +64,8 @@ async def create_reservation(
     if await check_time_overlap(
         session,
         reservation_data.device_id,
-        reservation_data.start_time,
-        reservation_data.end_time,
+        start_utc,
+        end_utc,
     ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -67,7 +73,10 @@ async def create_reservation(
         )
 
     reservation = Reservation(
-        **reservation_data.model_dump(),
+        device_id=payload["device_id"],
+        start_time=start_utc,
+        end_time=end_utc,
+        purpose=payload.get("purpose"),
         user_id=current_user.id,
     )
     session.add(reservation)
@@ -107,8 +116,14 @@ async def update_reservation(
 
     update_dict = reservation_data.model_dump(exclude_unset=True)
 
-    new_start = update_dict.get("start_time", reservation.start_time)
-    new_end = update_dict.get("end_time", reservation.end_time)
+    new_start = (
+        ensure_utc(update_dict["start_time"])
+        if "start_time" in update_dict
+        else reservation.start_time
+    )
+    new_end = (
+        ensure_utc(update_dict["end_time"]) if "end_time" in update_dict else reservation.end_time
+    )
     new_status = update_dict.get("status", reservation.status)
 
     if new_start >= new_end:
@@ -130,6 +145,8 @@ async def update_reservation(
         )
 
     for key, value in update_dict.items():
+        if key in ("start_time", "end_time") and isinstance(value, datetime):
+            value = ensure_utc(value)
         setattr(reservation, key, value)
 
     await session.commit()

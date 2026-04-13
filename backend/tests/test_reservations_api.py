@@ -1,7 +1,7 @@
 """予約 API の結合テスト（認証は依存性オーバーライド）。"""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -65,8 +65,8 @@ async def test_post_reservation_success(reservation_client):
         "/api/reservations",
         json={
             "device_id": str(device.id),
-            "start_time": "2026-04-15T10:00:00",
-            "end_time": "2026-04-15T12:00:00",
+            "start_time": "2026-04-15T10:00:00Z",
+            "end_time": "2026-04-15T12:00:00Z",
             "purpose": "結合試験",
         },
     )
@@ -89,8 +89,8 @@ async def test_post_reservation_overlap_returns_409(reservation_client):
         "/api/reservations",
         json={
             "device_id": str(device.id),
-            "start_time": "2026-04-15T10:00:00",
-            "end_time": "2026-04-15T12:00:00",
+            "start_time": "2026-04-15T10:00:00Z",
+            "end_time": "2026-04-15T12:00:00Z",
         },
     )
     assert first.status_code == 200
@@ -99,8 +99,8 @@ async def test_post_reservation_overlap_returns_409(reservation_client):
         "/api/reservations",
         json={
             "device_id": str(device.id),
-            "start_time": "2026-04-15T11:00:00",
-            "end_time": "2026-04-15T13:00:00",
+            "start_time": "2026-04-15T11:00:00Z",
+            "end_time": "2026-04-15T13:00:00Z",
         },
     )
     assert second.status_code == 409
@@ -121,8 +121,8 @@ async def test_put_reservation_overlap_returns_409(reservation_client):
         "/api/reservations",
         json={
             "device_id": str(device.id),
-            "start_time": "2026-04-15T10:00:00",
-            "end_time": "2026-04-15T12:00:00",
+            "start_time": "2026-04-15T10:00:00Z",
+            "end_time": "2026-04-15T12:00:00Z",
         },
     )
     assert mine.status_code == 200
@@ -132,8 +132,8 @@ async def test_put_reservation_overlap_returns_409(reservation_client):
         Reservation(
             device_id=device.id,
             user_id=other.id,
-            start_time=datetime(2026, 4, 15, 14, 0),
-            end_time=datetime(2026, 4, 15, 16, 0),
+            start_time=datetime(2026, 4, 15, 14, 0, tzinfo=timezone.utc),
+            end_time=datetime(2026, 4, 15, 16, 0, tzinfo=timezone.utc),
             status=ReservationStatus.CONFIRMED,
         )
     )
@@ -141,7 +141,7 @@ async def test_put_reservation_overlap_returns_409(reservation_client):
 
     conflict = await client.put(
         f"/api/reservations/{my_id}",
-        json={"end_time": "2026-04-15T15:00:00"},
+        json={"end_time": "2026-04-15T15:00:00Z"},
     )
     assert conflict.status_code == 409
 
@@ -161,8 +161,8 @@ async def test_put_reservation_cancelled_skips_overlap(reservation_client):
         "/api/reservations",
         json={
             "device_id": str(device.id),
-            "start_time": "2026-04-15T10:00:00",
-            "end_time": "2026-04-15T12:00:00",
+            "start_time": "2026-04-15T10:00:00Z",
+            "end_time": "2026-04-15T12:00:00Z",
         },
     )
     assert mine.status_code == 200
@@ -172,8 +172,8 @@ async def test_put_reservation_cancelled_skips_overlap(reservation_client):
         Reservation(
             device_id=device.id,
             user_id=other.id,
-            start_time=datetime(2026, 4, 15, 11, 0),
-            end_time=datetime(2026, 4, 15, 13, 0),
+            start_time=datetime(2026, 4, 15, 11, 0, tzinfo=timezone.utc),
+            end_time=datetime(2026, 4, 15, 13, 0, tzinfo=timezone.utc),
             status=ReservationStatus.CONFIRMED,
         )
     )
@@ -202,8 +202,8 @@ async def test_list_reservations_only_own(reservation_client):
         Reservation(
             device_id=device.id,
             user_id=other.id,
-            start_time=datetime(2026, 4, 20, 9, 0),
-            end_time=datetime(2026, 4, 20, 10, 0),
+            start_time=datetime(2026, 4, 20, 9, 0, tzinfo=timezone.utc),
+            end_time=datetime(2026, 4, 20, 10, 0, tzinfo=timezone.utc),
             status=ReservationStatus.CONFIRMED,
         )
     )
@@ -213,8 +213,8 @@ async def test_list_reservations_only_own(reservation_client):
         "/api/reservations",
         json={
             "device_id": str(device.id),
-            "start_time": "2026-04-20T10:00:00",
-            "end_time": "2026-04-20T11:00:00",
+            "start_time": "2026-04-20T10:00:00Z",
+            "end_time": "2026-04-20T11:00:00Z",
         },
     )
 
@@ -237,8 +237,8 @@ async def test_delete_reservation(reservation_client):
         "/api/reservations",
         json={
             "device_id": str(device.id),
-            "start_time": "2026-04-21T10:00:00",
-            "end_time": "2026-04-21T11:00:00",
+            "start_time": "2026-04-21T10:00:00Z",
+            "end_time": "2026-04-21T11:00:00Z",
         },
     )
     rid = created.json()["id"]

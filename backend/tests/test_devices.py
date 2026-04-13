@@ -1,7 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
@@ -142,15 +143,15 @@ class TestDeleteDevice:
         reservation = Reservation(
             device_id=device.id,
             user_id=user.id,
-            start_time=datetime(2026, 4, 15, 10, 0),
-            end_time=datetime(2026, 4, 15, 12, 0),
+            start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
+            end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
         )
         session.add(reservation)
         await session.commit()
 
         device_id = device.id
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             await delete_device(session, device)
 
         await session.rollback()

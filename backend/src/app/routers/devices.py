@@ -36,12 +36,14 @@ async def list_devices(
     status: DeviceStatus | None = Query(None, description="Filter by status"),
     session: AsyncSession = Depends(get_session),
 ) -> list[Device]:
-    return await search_devices(
-        session,
-        q=q,
-        category=category,
-        location=location,
-        status=status,
+    return list(
+        await search_devices(
+            session,
+            q=q,
+            category=category,
+            location=location,
+            status=status,
+        )
     )
 
 

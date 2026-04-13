@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +43,7 @@ async def update_device(
     update_dict = device_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
         setattr(device, key, value)
-    device.updated_at = datetime.utcnow()
+    device.updated_at = datetime.now(UTC)
     await session.commit()
     await session.refresh(device)
     return device

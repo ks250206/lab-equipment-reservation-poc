@@ -56,6 +56,7 @@ pnpm dev
 | サービス | URL |
 |---------|-----|
 | FastAPI | http://localhost:8000 |
+| OpenAPI (Swagger UI) | http://localhost:8000/docs |
 | Vite | http://localhost:5173 |
 | Keycloak | http://localhost:8080 |
 | PostgreSQL | localhost:5432 |

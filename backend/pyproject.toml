@@ -34,7 +34,6 @@ ignore = []
 [tool.ruff.lint.per-file-ignores]
 "src/app/routers/*.py" = ["B008", "B904"]
 "src/app/auth.py" = ["B008", "B904"]
-"tests/test_devices.py" = ["B017"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
