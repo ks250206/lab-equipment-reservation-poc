@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config import settings
+from app.config import UserRole, settings
 from app.db import Base
 from app.models import Device, User
 from app.services.users import (
@@ -91,10 +91,10 @@ class TestUpdateUser:
 
         from app.schemas import UserUpdate
 
-        updated = await update_user(session, user, UserUpdate(name="更新名", role="admin"))
+        updated = await update_user(session, user, UserUpdate(name="更新名"))
 
         assert updated.name == "更新名"
-        assert updated.role == "admin"
+        assert updated.role == UserRole.USER
 
     async def test_update_user_partial(self, session: AsyncSession):
         user = await create_user(

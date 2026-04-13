@@ -43,8 +43,9 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
+    """管理者による更新。ロールは Keycloak 側のため name のみ。"""
+
     name: str | None = None
-    role: str | None = None
 
 
 class UserResponse(UserBase):

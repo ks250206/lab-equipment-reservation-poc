@@ -23,7 +23,7 @@ SEED_USERS: list[dict[str, object]] = [
         "keycloak_id": "seed-yamada-taro",
         "email": "yamada.taro@example.local",
         "name": "山田 太郎",
-        "role": UserRole.ADMIN,
+        "role": UserRole.USER,
     },
     {
         "id": uid("sato"),

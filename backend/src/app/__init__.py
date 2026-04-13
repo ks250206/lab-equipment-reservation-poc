@@ -1,4 +1,4 @@
-from .auth import get_current_user, require_admin
+from .auth import get_current_user, get_token_payload, require_admin
 from .config import settings
 from .db import engine, get_session
 from .main import app
@@ -33,6 +33,7 @@ __all__ = [
     "ReservationUpdate",
     "ReservationResponse",
     "get_current_user",
+    "get_token_payload",
     "require_admin",
     "users_router",
     "devices_router",

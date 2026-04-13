@@ -54,7 +54,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 7. リファクタリング | `it7-refactor` | 完了 |
 | 8. タスクランナー（just） | `it8-just` | 完了 |
 | 9. 永続化プロファイル・開発シード | `it9-persistence-seed` | 完了 |
-| 10. Keycloak ロールベース認可（管理者の正） | `it10-keycloak-rbac` | 未着手 |
+| 10. Keycloak ロールベース認可（管理者の正） | `it10-keycloak-rbac` | 完了 |
 
 ---
 

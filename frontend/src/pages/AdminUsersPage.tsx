@@ -15,7 +15,6 @@ export function AdminUsersPage() {
 
   const [editing, setEditing] = useState<UserSelf | null>(null);
   const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState<"user" | "admin">("user");
   const [formError, setFormError] = useState<string | null>(null);
 
   const isAdmin = meQuery.data?.role === "admin";
@@ -33,7 +32,6 @@ export function AdminUsersPage() {
   useEffect(() => {
     if (editing) {
       setEditName(editing.name ?? "");
-      setEditRole(editing.role === "admin" ? "admin" : "user");
       setFormError(null);
     }
   }, [editing]);
@@ -45,7 +43,6 @@ export function AdminUsersPage() {
       if (!token) throw new Error("ログイン情報が無効です");
       return updateUserAdmin(token, editing.id, {
         name: editName.trim() || null,
-        role: editRole,
       });
     },
     onSuccess: () => {
@@ -108,18 +105,14 @@ export function AdminUsersPage() {
       <div className="space-y-2">
         <h1 className="text-xl font-semibold">ユーザー管理</h1>
         <p className="text-sm text-zinc-700">
-          この画面は<strong className="font-medium">管理者</strong>のみ利用できます。現在のロール:{" "}
+          この画面は<strong className="font-medium">管理者</strong>のみ利用できます。トークン上のロール:{" "}
           <span className="font-mono text-zinc-800">{meQuery.data.role}</span>
         </p>
         <p className="text-sm text-zinc-600">
-          アプリDBの管理者は Keycloak の「realm 管理者」とは別です。初回ログイン前にバックエンドの{" "}
-          <code className="rounded bg-zinc-100 px-1 font-mono text-xs">
-            KEYCLOAK_BOOTSTRAP_ADMIN_USERNAMES
-          </code>{" "}
-          に Keycloak の <code className="font-mono text-xs">preferred_username</code>（例:{" "}
-          <code className="font-mono text-xs">admin</code>）を含めてください。既に一般ユーザーとして登録済みの場合は、DB の{" "}
-          <code className="font-mono text-xs">users.role</code> を{" "}
-          <code className="font-mono text-xs">admin</code> に更新してから再ログインしてください。
+          管理者は Keycloak のレルムロール <code className="font-mono text-xs">app-admin</code>{" "}
+          がアクセストークンに含まれている必要があります。開発では{" "}
+          <code className="font-mono text-xs">just seed-dev</code> が Keycloak 管理 API で付与を試みます。手動の場合は{" "}
+          <code className="font-mono text-xs">doc/keycloak-setup.md</code> を参照してください。
         </p>
       </div>
     );
@@ -131,8 +124,9 @@ export function AdminUsersPage() {
         <h1 className="text-xl font-semibold">ユーザー管理</h1>
         <p className="mt-1 text-sm text-zinc-600">
           アプリ DB の <code className="rounded bg-zinc-100 px-1 font-mono text-xs">users</code>{" "}
-          テーブルを表示・更新します（表示名・ロール）。ログインやパスワードの正は Keycloak
-          側のままです。この画面は Keycloak 管理コンソールの代替にはなりません。
+          テーブルを表示し、表示名のみ更新できます。API の管理者判定とログイン中の自分のロールは Keycloak の{" "}
+          <code className="font-mono text-xs">app-admin</code> レルムロールが正です。一覧の「ロール」列は DB
+          上の値であり、他ユーザーの Keycloak ロールとは一致しない場合があります。
         </p>
       </div>
 
@@ -157,17 +151,6 @@ export function AdminUsersPage() {
                 className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
                 autoComplete="off"
               />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-sm font-medium text-zinc-700">ロール</span>
-              <select
-                value={editRole}
-                onChange={(e) => setEditRole(e.target.value as "user" | "admin")}
-                className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-              >
-                <option value="user">user</option>
-                <option value="admin">admin</option>
-              </select>
             </label>
             {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
             <div className="flex flex-wrap gap-2">
@@ -205,7 +188,7 @@ export function AdminUsersPage() {
                 <tr>
                   <th className="px-4 py-3">メール</th>
                   <th className="px-4 py-3">表示名</th>
-                  <th className="px-4 py-3">ロール</th>
+                  <th className="px-4 py-3">ロール（DB）</th>
                   <th className="px-4 py-3">Keycloak ID</th>
                   <th className="px-4 py-3">登録日</th>
                   <th className="px-4 py-3"> </th>

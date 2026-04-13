@@ -50,8 +50,6 @@ async def update_user(
 ) -> User:
     if user_data.name is not None:
         user.name = user_data.name
-    if user_data.role is not None:
-        user.role = UserRole(user_data.role)
     await session.commit()
     await session.refresh(user)
     return user

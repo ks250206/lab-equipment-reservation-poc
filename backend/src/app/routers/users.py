@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import get_current_user, require_admin
+from ..auth import get_current_user, get_token_payload, is_app_admin_from_payload, require_admin
+from ..config import UserRole
 from ..db import get_session
 from ..models import User
 from ..schemas import UserResponse, UserUpdate
@@ -15,8 +16,19 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)) -> User:
-    return current_user
+async def get_current_user_info(
+    current_user: User = Depends(get_current_user),
+    payload: dict = Depends(get_token_payload),
+) -> UserResponse:
+    role = UserRole.ADMIN if is_app_admin_from_payload(payload) else UserRole.USER
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        keycloak_id=current_user.keycloak_id,
+        role=role.value,
+        created_at=current_user.created_at,
+    )
 
 
 @router.get("", response_model=list[UserResponse])

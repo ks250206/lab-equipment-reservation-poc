@@ -13,7 +13,10 @@ from ..config import Settings
 from ..db import async_session_factory, init_db
 from ..models import Device, Reservation, User
 from .dev_seed import DEVICE_ROWS, SEED_DEVICE_IDS, SEED_USER_IDS, SEED_USERS
-from .keycloak_seed import ensure_keycloak_device_reservation_client
+from .keycloak_seed import (
+    ensure_keycloak_app_admin_realm_role,
+    ensure_keycloak_device_reservation_client,
+)
 
 
 def ensure_development_for_seed() -> None:
@@ -77,7 +80,10 @@ async def run_seed(
 
 async def _run_seed_and_keycloak() -> str:
     await run_seed()
-    return await ensure_keycloak_device_reservation_client(Settings())
+    cfg = Settings()
+    line1 = await ensure_keycloak_device_reservation_client(cfg)
+    line2 = await ensure_keycloak_app_admin_realm_role(cfg)
+    return f"{line1}\n{line2}"
 
 
 def main() -> None:

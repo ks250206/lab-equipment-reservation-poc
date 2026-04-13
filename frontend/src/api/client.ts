@@ -2,7 +2,7 @@ import { env } from "../env";
 
 import type { Device, FacetsResponse, Reservation, UserSelf } from "./types";
 
-export type UserUpdateBody = { name?: string | null; role?: string };
+export type UserUpdateBody = { name?: string | null };
 
 function buildUrl(path: string, params?: Record<string, string | undefined>): string {
   const base = path.startsWith("http") ? path : `${env.apiBase}${path}`;

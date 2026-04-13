@@ -199,3 +199,85 @@ async def ensure_keycloak_device_reservation_client(settings: Settings) -> str:
     except Exception as e:
         logger.warning("Keycloak シード: 失敗 %s", e)
         return f"Keycloak: 自動設定をスキップしました（{e}）。"
+
+
+async def ensure_keycloak_app_admin_realm_role(settings: Settings) -> str:
+    """
+    レルムロール（既定名 app-admin）を冪等に作成し、既定ユーザーにマッピングする。
+
+    Keycloak が未到達のときは接続エラーを握りつぶし、メッセージのみ返す。
+    """
+    from urllib.parse import quote
+
+    base = settings.keycloak_url.rstrip("/")
+    realm = settings.keycloak_realm
+    role_name = settings.keycloak_app_admin_realm_role
+    grant_username = settings.keycloak_seed_grant_app_admin_username
+    user = settings.keycloak_seed_admin_username
+    pw = settings.keycloak_seed_admin_password
+
+    try:
+        async with _keycloak_client() as client:
+            token = await _admin_token(client, base, user, pw)
+            headers = {"Authorization": f"Bearer {token}"}
+            roles_base = f"{base}/admin/realms/{realm}/roles"
+
+            gr = await client.get(f"{roles_base}/{quote(role_name, safe='')}", headers=headers)
+            if gr.status_code == 404:
+                cr = await client.post(roles_base, headers=headers, json={"name": role_name})
+                cr.raise_for_status()
+                gr = await client.get(f"{roles_base}/{quote(role_name, safe='')}", headers=headers)
+            gr.raise_for_status()
+            role_rep = gr.json()
+            if not isinstance(role_rep, dict) or not isinstance(role_rep.get("id"), str):
+                raise RuntimeError("Keycloak: ロール表現が不正です")
+
+            ur = await client.get(
+                f"{base}/admin/realms/{realm}/users",
+                params={"username": grant_username, "exact": "true"},
+                headers=headers,
+            )
+            ur.raise_for_status()
+            users = ur.json()
+            if not isinstance(users, list) or not users:
+                return (
+                    f"Keycloak: レルムロール「{role_name}」は用意しましたが、"
+                    f"ユーザー名「{grant_username}」が見つからずマッピングをスキップしました。"
+                )
+            uid = users[0].get("id")
+            if not isinstance(uid, str):
+                raise RuntimeError("Keycloak: ユーザー id が不正です")
+
+            mr = await client.post(
+                f"{base}/admin/realms/{realm}/users/{uid}/role-mappings/realm",
+                headers=headers,
+                json=[role_rep],
+            )
+            if mr.status_code not in (200, 204):
+                mr.raise_for_status()
+
+            return (
+                f"Keycloak: レルムロール「{role_name}」をユーザー「{grant_username}」へ "
+                "冪等付与しました。"
+            )
+
+    except httpx.HTTPStatusError as e:
+        detail = ""
+        try:
+            detail = e.response.text[:500]
+        except Exception:
+            pass
+        logger.warning("Keycloak ロールシード: HTTP エラー %s %s", e.response.status_code, detail)
+        return (
+            f"Keycloak: ロール自動設定をスキップしました（HTTP {e.response.status_code}）。"
+            " 管理コンソールでレルムロールを手動付与するか、KEYCLOAK_SEED_* を確認してください。"
+        )
+    except (httpx.ConnectError, httpx.TimeoutException) as e:
+        logger.warning("Keycloak ロールシード: 接続不可 %s", e)
+        return (
+            "Keycloak: 未起動のためロール自動設定をスキップしました。"
+            "（`just deps-up` 後に再実行可能）"
+        )
+    except Exception as e:
+        logger.warning("Keycloak ロールシード: 失敗 %s", e)
+        return f"Keycloak: ロール自動設定をスキップしました（{e}）。"

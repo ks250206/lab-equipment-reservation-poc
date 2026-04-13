@@ -4,9 +4,10 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from jwt_payload_utils import jwt_like_payload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_token_payload
 from app.config import UserRole, settings
 from app.db import Base, get_session
 from app.main import app
@@ -47,8 +48,15 @@ async def users_admin_client(engine):
             assert row is not None
             return row
 
+        async def override_get_token_payload():
+            return jwt_like_payload(
+                sub=admin.keycloak_id,
+                realm_roles=["app-admin", "offline_access"],
+            )
+
         app.dependency_overrides[get_session] = override_get_session
         app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[get_token_payload] = override_get_token_payload
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -74,8 +82,15 @@ async def users_regular_client(engine):
             assert row is not None
             return row
 
+        async def override_get_token_payload():
+            return jwt_like_payload(
+                sub=user.keycloak_id,
+                realm_roles=["default-roles-master"],
+            )
+
         app.dependency_overrides[get_session] = override_get_session
         app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[get_token_payload] = override_get_token_payload
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -92,6 +107,7 @@ async def test_get_me(users_admin_client):
     body = r.json()
     assert body["id"] == str(admin.id)
     assert body["email"] == admin.email
+    assert body["role"] == "admin"
 
 
 @pytest.mark.asyncio
@@ -131,17 +147,17 @@ async def test_put_user_admin_updates(users_admin_client):
     client, session, _admin, other = users_admin_client
     r = await client.put(
         f"/api/users/{other.id}",
-        json={"name": "更新後の名前", "role": "admin"},
+        json={"name": "更新後の名前"},
     )
     assert r.status_code == 200
     body = r.json()
     assert body["name"] == "更新後の名前"
-    assert body["role"] == "admin"
+    assert body["role"] == "user"
 
     refreshed = await session.get(User, other.id)
     assert refreshed is not None
     assert refreshed.name == "更新後の名前"
-    assert refreshed.role.value == "admin"
+    assert refreshed.role == UserRole.USER
 
 
 @pytest.mark.asyncio

@@ -8,7 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.auth as auth_mod
-from app.auth import get_or_create_user_from_payload
+from app.auth import (
+    get_or_create_user_from_payload,
+    is_app_admin_from_payload,
+    realm_roles_from_payload,
+)
 from app.config import UserRole, settings
 from app.db import Base
 from app.models import User
@@ -53,6 +57,7 @@ async def test_get_or_create_inserts_without_email(session: AsyncSession):
     user = await get_or_create_user_from_payload(session, {"sub": "anon-kc-1"})
     assert user.keycloak_id == "anon-kc-1"
     assert user.email == "anon-kc-1@unknown.local"
+    assert user.role == UserRole.USER
 
     result = await session.execute(select(User).where(User.keycloak_id == "anon-kc-1"))
     assert result.scalar_one().id == user.id
@@ -74,62 +79,20 @@ async def test_get_or_create_coerces_invalid_email(session: AsyncSession):
     assert user.email == "kc-bad-email@unknown.local"
 
 
-@pytest.mark.asyncio
-async def test_get_or_create_bootstrap_admin_by_preferred_username(
-    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-):
+def test_realm_roles_from_payload_parses_roles():
+    assert realm_roles_from_payload({"realm_access": {"roles": ["a", "b"]}}) == {"a", "b"}
+    assert realm_roles_from_payload({}) == set()
+    assert realm_roles_from_payload({"realm_access": {}}) == set()
+
+
+def test_is_app_admin_from_payload(monkeypatch):
     monkeypatch.setattr(
         auth_mod,
         "settings",
-        SimpleNamespace(
-            keycloak_bootstrap_admin_usernames="alice,bob",
-            is_development=False,
-        ),
+        SimpleNamespace(keycloak_app_admin_realm_role="app-admin"),
     )
-    admin_user = await get_or_create_user_from_payload(
-        session,
-        {"sub": "kc-a1", "preferred_username": "alice", "email": "alice@example.com"},
-    )
-    assert admin_user.role == UserRole.ADMIN
-
-    plain = await get_or_create_user_from_payload(
-        session,
-        {"sub": "kc-u2", "preferred_username": "charlie", "email": "c@example.com"},
-    )
-    assert plain.role == UserRole.USER
-
-
-@pytest.mark.asyncio
-async def test_get_or_create_dev_grants_admin_for_keycloak_admin_username(
-    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-):
-    """development かつ env 未指定でも preferred_username=admin をアプリ admin にする。"""
-    monkeypatch.setattr(
-        auth_mod,
-        "settings",
-        SimpleNamespace(keycloak_bootstrap_admin_usernames="", is_development=True),
-    )
-    u = await get_or_create_user_from_payload(
-        session,
-        {"sub": "kc-dev-admin", "preferred_username": "admin", "email": "a@example.com"},
-    )
-    assert u.role == UserRole.ADMIN
-
-
-@pytest.mark.asyncio
-async def test_get_or_create_production_no_default_admin_without_env(
-    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-):
-    monkeypatch.setattr(
-        auth_mod,
-        "settings",
-        SimpleNamespace(keycloak_bootstrap_admin_usernames="", is_development=False),
-    )
-    u = await get_or_create_user_from_payload(
-        session,
-        {"sub": "kc-prod", "preferred_username": "admin", "email": "a@example.com"},
-    )
-    assert u.role == UserRole.USER
+    assert is_app_admin_from_payload({"realm_access": {"roles": ["app-admin"]}})
+    assert not is_app_admin_from_payload({"realm_access": {"roles": ["user"]}})
 
 
 @pytest.mark.asyncio

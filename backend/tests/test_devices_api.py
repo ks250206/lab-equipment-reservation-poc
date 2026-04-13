@@ -4,9 +4,10 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from jwt_payload_utils import jwt_like_payload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_token_payload
 from app.config import UserRole, settings
 from app.db import Base, get_session
 from app.main import app
@@ -45,8 +46,15 @@ async def devices_client(engine):
             assert row is not None
             return row
 
+        async def override_get_token_payload():
+            return jwt_like_payload(
+                sub=admin.keycloak_id,
+                realm_roles=["app-admin"],
+            )
+
         app.dependency_overrides[get_session] = override_get_session
         app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[get_token_payload] = override_get_token_payload
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -73,8 +81,15 @@ async def devices_anon_client(engine):
             assert row is not None
             return row
 
+        async def override_get_token_payload():
+            return jwt_like_payload(
+                sub=user.keycloak_id,
+                realm_roles=["default-roles-master"],
+            )
+
         app.dependency_overrides[get_session] = override_get_session
         app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[get_token_payload] = override_get_token_payload
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:

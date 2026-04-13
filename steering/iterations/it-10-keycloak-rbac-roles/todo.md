@@ -1,10 +1,10 @@
 # TODO — it-10-keycloak-rbac-roles
 
-- [ ] ロール設計を確定する（レルムロール vs `device-reservation` クライアントロール、ロール名、composite の要否）
-- [ ] FastAPI: JWT からロールを抽出するモジュール（`decode_token` 後のクレーム解釈）と `require_admin` の置き換え
-- [ ] `GET /api/users/me` の `role` を Keycloak 由来に統一（必要なら DB 列の扱いを決めてマイグレーション or 無視化）
-- [ ] `PUT /api/users/{id}` の `role` 更新の扱い（削除・Keycloak Admin API 連携・403 等）を仕様どおりに変更
-- [ ] 開発シード: Keycloak Admin API でロール作成・ユーザー割当を冪等に追加（`keycloak_seed.py` 拡張など）
-- [ ] `KEYCLOAK_BOOTSTRAP_ADMIN_USERNAMES` および dev 専用の `admin` 自動昇格ロジックを撤去または無効化し、`.env.example` / `doc/` を追随
-- [ ] フロント: 管理者画面の表示条件をトークンまたは更新後の `/users/me` に合わせる
-- [ ] テスト・`ty` / `ruff` / pytest をグリーンにし、`work_report.md` を更新
+- [x] ロール設計: レルムロール `app-admin`（`KEYCLOAK_APP_ADMIN_REALM_ROLE` で変更可）
+- [x] FastAPI: `realm_access.roles` から `require_admin` を判定、`get_token_payload` を追加
+- [x] `GET /api/users/me` の `role` を JWT 由来に統一
+- [x] `PUT /api/users/{id}` から `role` 更新を除去（`UserUpdate` / サービス）
+- [x] 開発シード: `ensure_keycloak_app_admin_realm_role` でロール作成・ユーザー割当
+- [x] `KEYCLOAK_BOOTSTRAP_ADMIN_USERNAMES` と DB ブートストラップを撤去
+- [x] フロント: 管理者画面からロール編集を除去、文言を Keycloak ベースに更新
+- [x] テスト・`doc/` / `.env.example` 更新

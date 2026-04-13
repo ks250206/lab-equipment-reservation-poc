@@ -66,7 +66,7 @@ class TestUserSchemaValidation:
 
         user = UserUpdate(name="new name")
         assert user.name == "new name"
-        assert user.role is None
+        assert "role" not in UserUpdate.model_fields
 
     def test_user_schema_has_expected_fields(self):
         from app.schemas import UserCreate

@@ -42,7 +42,7 @@
 
 - 開発時は Keycloak のクライアント設定で Vite のオリジンを許可する。
 - トークン保管方式（例: `localStorage`）はセキュリティトレードオフを理解したうえで実装し、本番移行時に見直す。
-- **利用者データの二層**: 認証の正は Keycloak。アプリ用 `users` 行は JWT の `sub` に紐づけて初回 API アクセス時に作成し、予約 FK や表示用プロフィールに使う（詳細は [@doc/functional-design.md](functional-design.md) の users 節）。**認可（管理者など）**はイテレーション 10 以降、Keycloak のロールクレームを正とする予定（現状は DB `role` 依存）。
+- **利用者データの二層**: 認証の正は Keycloak。アプリ用 `users` 行は JWT の `sub` に紐づけて初回 API アクセス時に作成し、予約 FK や表示用プロフィールに使う（詳細は [@doc/functional-design.md](functional-design.md) の users 節）。**認可（管理者など）**は Keycloak のレルムロール（既定 `app-admin`）が JWT に含まれるかで判定する。
 
 ## 6. 設定・秘密情報
 

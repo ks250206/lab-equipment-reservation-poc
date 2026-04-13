@@ -7,7 +7,7 @@ from pydantic import EmailStr, TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .config import Settings, UserRole, settings
+from .config import UserRole, settings
 from .db import get_session
 from .models import User
 
@@ -98,13 +98,30 @@ async def decode_token(token: str, jwks: dict | None = None) -> dict:
     if not _access_token_allows_client(payload, settings.keycloak_client_id):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=(
-                "Invalid token: client mismatch "
-                "(expected azp or aud to match API client id)"
-            ),
+            detail=("Invalid token: client mismatch (expected azp or aud to match API client id)"),
         )
 
     return payload
+
+
+def realm_roles_from_payload(payload: dict) -> set[str]:
+    """Keycloak access token の realm_access.roles を集合で返す。"""
+    ra = payload.get("realm_access")
+    if not isinstance(ra, dict):
+        return set()
+    roles = ra.get("roles")
+    if not isinstance(roles, list):
+        return set()
+    out: set[str] = set()
+    for x in roles:
+        if isinstance(x, str):
+            out.add(x)
+    return out
+
+
+def is_app_admin_from_payload(payload: dict) -> bool:
+    """アプリ管理者: レルムロール名が設定値と一致するか（Keycloak が正）。"""
+    return settings.keycloak_app_admin_realm_role in realm_roles_from_payload(payload)
 
 
 def _safe_email_for_user(raw: object, keycloak_id: str) -> str:
@@ -122,22 +139,18 @@ def _safe_email_for_user(raw: object, keycloak_id: str) -> str:
         return placeholder
 
 
-def _bootstrap_admin_preferred_usernames(cfg: Settings) -> set[str]:
-    """開発時は Keycloak 既定の管理者（preferred_username=admin）を常にアプリ admin に含める。"""
-    names: set[str] = set()
-    raw = (cfg.keycloak_bootstrap_admin_usernames or "").strip()
-    if raw:
-        names.update(x.strip() for x in raw.split(",") if x.strip())
-    if cfg.is_development:
-        names.add("admin")
-    return names
+async def get_token_payload(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict:
+    """検証済み JWT ペイロード（同一リクエスト内で複数 Depends しても再検証はキャッシュされる）。"""
+    return await decode_token(credentials.credentials)
 
 
-def _initial_role_from_payload(payload: dict, cfg: Settings) -> UserRole:
-    pn = payload.get("preferred_username")
-    if isinstance(pn, str) and pn.strip() in _bootstrap_admin_preferred_usernames(cfg):
-        return UserRole.ADMIN
-    return UserRole.USER
+async def get_current_user(
+    payload: dict = Depends(get_token_payload),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    return await get_or_create_user_from_payload(session, payload)
 
 
 async def get_or_create_user_from_payload(session: AsyncSession, payload: dict) -> User:
@@ -159,7 +172,7 @@ async def get_or_create_user_from_payload(session: AsyncSession, payload: dict) 
             keycloak_id=keycloak_id,
             email=email,
             name=name,
-            role=_initial_role_from_payload(payload, settings),
+            role=UserRole.USER,
         )
         session.add(user)
         await session.commit()
@@ -168,19 +181,13 @@ async def get_or_create_user_from_payload(session: AsyncSession, payload: dict) 
     return user
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    session: AsyncSession = Depends(get_session),
+async def require_admin(
+    _user: User = Depends(get_current_user),
+    payload: dict = Depends(get_token_payload),
 ) -> User:
-    token = credentials.credentials
-    payload = await decode_token(token)
-    return await get_or_create_user_from_payload(session, payload)
-
-
-async def require_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != settings.UserRole.ADMIN:
+    if not is_app_admin_from_payload(payload):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
-    return user
+    return _user

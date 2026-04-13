@@ -157,6 +157,17 @@
 - **別レルム**にクライアントを作り、フロントの **`VITE_KEYCLOAK_REALM`** が `master` のまま。
 - **Client ID** の綴りと **`VITE_KEYCLOAK_CLIENT_ID`** が一致していない。
 
+## アプリ管理者ロール（`app-admin`）
+
+装置の作成・削除や `/api/users` の閲覧など **管理者向け API** は、ログイン後に取得するアクセストークンの **`realm_access.roles`** に **`app-admin`**（環境変数 `KEYCLOAK_APP_ADMIN_REALM_ROLE` で変更可）が含まれる場合にのみ利用できます。
+
+1. 管理コンソールで **Realm roles**（または該当レルムの「ロール」）を開く。
+2. **Create role** で名前 **`app-admin`** を作成する（既にあればスキップ）。
+3. **Users** で対象ユーザーを開き、**Role mapping** タブで **Assign role** → **Filter by realm roles** から **`app-admin`** を割り当てる。
+4. ブラウザで **再ログイン**し、アクセストークンに `realm_access.roles` に `app-admin` が載ることを確認する（JWT デバッガや Keycloak のトークン調査 UI 等）。
+
+開発では `just seed-dev`（`ENVIRONMENT=development`）が Keycloak 管理 API に届く場合、上記ロールの作成と既定ユーザー **`admin`** への付与を冪等に試みます。
+
 ## バックエンドとの関係（参考）
 
 - API は `Authorization: Bearer <JWT>` を検証します。トークンの **issuer**（iss）や **JWKS** は Keycloak のレルム設定と一致している必要があります。
