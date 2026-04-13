@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 class TestDeviceStatus:
@@ -84,8 +84,8 @@ class TestReservationSchemaValidation:
 
         res = ReservationCreate(
             device_id=uuid.uuid4(),
-            start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
-            end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
+            start_time=datetime(2026, 4, 15, 10, 0, tzinfo=UTC),
+            end_time=datetime(2026, 4, 15, 12, 0, tzinfo=UTC),
         )
         assert res.device_id is not None
 

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -128,8 +128,8 @@ class TestReservationService:
             session,
             ReservationCreate(
                 device_id=device.id,
-                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
-                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
+                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=UTC),
+                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=UTC),
                 purpose="テスト目的",
             ),
             user.id,
@@ -160,8 +160,8 @@ class TestReservationService:
             session,
             ReservationCreate(
                 device_id=device.id,
-                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
-                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
+                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=UTC),
+                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=UTC),
             ),
             user.id,
         )
@@ -169,8 +169,8 @@ class TestReservationService:
         overlap = await check_time_overlap(
             session,
             device.id,
-            datetime(2026, 4, 15, 11, 0, tzinfo=timezone.utc),
-            datetime(2026, 4, 15, 13, 0, tzinfo=timezone.utc),
+            datetime(2026, 4, 15, 11, 0, tzinfo=UTC),
+            datetime(2026, 4, 15, 13, 0, tzinfo=UTC),
         )
 
         assert overlap is True
@@ -178,8 +178,8 @@ class TestReservationService:
         no_overlap = await check_time_overlap(
             session,
             device.id,
-            datetime(2026, 4, 15, 14, 0, tzinfo=timezone.utc),
-            datetime(2026, 4, 15, 16, 0, tzinfo=timezone.utc),
+            datetime(2026, 4, 15, 14, 0, tzinfo=UTC),
+            datetime(2026, 4, 15, 16, 0, tzinfo=UTC),
         )
 
         assert no_overlap is False
@@ -202,8 +202,8 @@ class TestReservationService:
             session,
             ReservationCreate(
                 device_id=device.id,
-                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
-                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
+                start_time=datetime(2026, 4, 15, 10, 0, tzinfo=UTC),
+                end_time=datetime(2026, 4, 15, 12, 0, tzinfo=UTC),
             ),
             user.id,
         )
@@ -212,3 +212,95 @@ class TestReservationService:
 
         assert len(result) == 1
         assert result[0].user_id == user.id
+
+    async def test_get_reservation_by_id(self, session: AsyncSession):
+        from app.schemas import ReservationCreate
+        from app.services.reservations import create_reservation, get_reservation
+
+        device = Device(name="get1")
+        session.add(device)
+        user = User(keycloak_id="get-r", email="get-r@test.com")
+        session.add_all([device, user])
+        await session.commit()
+        await session.refresh(device)
+        await session.refresh(user)
+
+        created = await create_reservation(
+            session,
+            ReservationCreate(
+                device_id=device.id,
+                start_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
+                end_time=datetime(2026, 5, 1, 11, 0, tzinfo=UTC),
+            ),
+            user.id,
+        )
+
+        found = await get_reservation(session, created.id)
+        assert found is not None
+        assert found.id == created.id
+
+        missing = await get_reservation(session, uuid.uuid4())
+        assert missing is None
+
+    async def test_get_reservations_by_device(self, session: AsyncSession):
+        from app.schemas import ReservationCreate
+        from app.services.reservations import create_reservation, get_reservations_by_device
+
+        device = Device(name="dev-list")
+        user = User(keycloak_id="dev-list-u", email="dl@test.com")
+        session.add_all([device, user])
+        await session.commit()
+        await session.refresh(device)
+        await session.refresh(user)
+
+        await create_reservation(
+            session,
+            ReservationCreate(
+                device_id=device.id,
+                start_time=datetime(2026, 5, 2, 10, 0, tzinfo=UTC),
+                end_time=datetime(2026, 5, 2, 11, 0, tzinfo=UTC),
+            ),
+            user.id,
+        )
+
+        rows = await get_reservations_by_device(session, device.id)
+        assert len(rows) == 1
+        assert rows[0].device_id == device.id
+
+    async def test_update_and_delete_reservation_service(self, session: AsyncSession):
+        from app.schemas import ReservationCreate, ReservationUpdate
+        from app.services.reservations import (
+            create_reservation,
+            delete_reservation,
+            get_reservation,
+            update_reservation,
+        )
+
+        device = Device(name="upd-del")
+        user = User(keycloak_id="upd-del-u", email="ud@test.com")
+        session.add_all([device, user])
+        await session.commit()
+        await session.refresh(device)
+        await session.refresh(user)
+
+        res = await create_reservation(
+            session,
+            ReservationCreate(
+                device_id=device.id,
+                start_time=datetime(2026, 5, 3, 10, 0, tzinfo=UTC),
+                end_time=datetime(2026, 5, 3, 11, 0, tzinfo=UTC),
+                purpose="元",
+            ),
+            user.id,
+        )
+
+        updated = await update_reservation(session, res, ReservationUpdate(purpose="更新後"))
+        assert updated.purpose == "更新後"
+
+        re_times = await update_reservation(
+            session, updated, ReservationUpdate(start_time=datetime(2026, 5, 3, 10, 15))
+        )
+        assert re_times.start_time.tzinfo is not None
+
+        await delete_reservation(session, re_times)
+        assert await get_reservation(session, res.id) is None

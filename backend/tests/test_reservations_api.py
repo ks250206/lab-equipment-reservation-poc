@@ -1,7 +1,7 @@
 """予約 API の結合テスト（認証は依存性オーバーライド）。"""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -132,8 +132,8 @@ async def test_put_reservation_overlap_returns_409(reservation_client):
         Reservation(
             device_id=device.id,
             user_id=other.id,
-            start_time=datetime(2026, 4, 15, 14, 0, tzinfo=timezone.utc),
-            end_time=datetime(2026, 4, 15, 16, 0, tzinfo=timezone.utc),
+            start_time=datetime(2026, 4, 15, 14, 0, tzinfo=UTC),
+            end_time=datetime(2026, 4, 15, 16, 0, tzinfo=UTC),
             status=ReservationStatus.CONFIRMED,
         )
     )
@@ -172,8 +172,8 @@ async def test_put_reservation_cancelled_skips_overlap(reservation_client):
         Reservation(
             device_id=device.id,
             user_id=other.id,
-            start_time=datetime(2026, 4, 15, 11, 0, tzinfo=timezone.utc),
-            end_time=datetime(2026, 4, 15, 13, 0, tzinfo=timezone.utc),
+            start_time=datetime(2026, 4, 15, 11, 0, tzinfo=UTC),
+            end_time=datetime(2026, 4, 15, 13, 0, tzinfo=UTC),
             status=ReservationStatus.CONFIRMED,
         )
     )
@@ -202,8 +202,8 @@ async def test_list_reservations_only_own(reservation_client):
         Reservation(
             device_id=device.id,
             user_id=other.id,
-            start_time=datetime(2026, 4, 20, 9, 0, tzinfo=timezone.utc),
-            end_time=datetime(2026, 4, 20, 10, 0, tzinfo=timezone.utc),
+            start_time=datetime(2026, 4, 20, 9, 0, tzinfo=UTC),
+            end_time=datetime(2026, 4, 20, 10, 0, tzinfo=UTC),
             status=ReservationStatus.CONFIRMED,
         )
     )
@@ -248,3 +248,60 @@ async def test_delete_reservation(reservation_client):
 
     result = await session.execute(select(Reservation).where(Reservation.id == uuid.UUID(rid)))
     assert result.scalar_one_or_none() is None
+
+
+@pytest.mark.asyncio
+async def test_post_reservation_unknown_device_404(reservation_client):
+    client, _session, _owner = reservation_client
+    r = await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(uuid.uuid4()),
+            "start_time": "2026-04-15T10:00:00Z",
+            "end_time": "2026-04-15T12:00:00Z",
+        },
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_post_reservation_invalid_time_range_400(reservation_client):
+    client, session, _owner = reservation_client
+    device = Device(name="時間不正")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    r = await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(device.id),
+            "start_time": "2026-04-15T12:00:00Z",
+            "end_time": "2026-04-15T10:00:00Z",
+        },
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_put_reservation_invalid_id_400(reservation_client):
+    client, _session, _owner = reservation_client
+    r = await client.put(
+        "/api/reservations/not-uuid",
+        json={"purpose": "x"},
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_delete_reservation_invalid_id_400(reservation_client):
+    client, _session, _owner = reservation_client
+    r = await client.delete("/api/reservations/not-uuid")
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_delete_reservation_not_found_404(reservation_client):
+    client, _session, _owner = reservation_client
+    r = await client.delete(f"/api/reservations/{uuid.uuid4()}")
+    assert r.status_code == 404

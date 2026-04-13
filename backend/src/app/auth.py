@@ -33,8 +33,10 @@ async def get_cached_jwks() -> dict:
     return _cached_jwks
 
 
-async def decode_token(token: str) -> dict:
-    jwks = await get_cached_jwks()
+async def decode_token(token: str, jwks: dict | None = None) -> dict:
+    """JWT を検証する。`jwks` を渡すとネットワーク取得を行わない（テスト用）。"""
+    if jwks is None:
+        jwks = await get_cached_jwks()
     try:
         unverified_header = jwt.get_unverified_header(token)
     except JWTError:
@@ -83,13 +85,7 @@ async def decode_token(token: str) -> dict:
     return payload
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    session: AsyncSession = Depends(get_session),
-) -> User:
-    token = credentials.credentials
-    payload = await decode_token(token)
-
+async def get_or_create_user_from_payload(session: AsyncSession, payload: dict) -> User:
     keycloak_id = payload.get("sub")
     if not keycloak_id:
         raise HTTPException(
@@ -115,6 +111,15 @@ async def get_current_user(
         await session.refresh(user)
 
     return user
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    token = credentials.credentials
+    payload = await decode_token(token)
+    return await get_or_create_user_from_payload(session, payload)
 
 
 async def require_admin(user: User = Depends(get_current_user)) -> User:

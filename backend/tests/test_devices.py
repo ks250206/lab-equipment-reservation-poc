@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -143,8 +143,8 @@ class TestDeleteDevice:
         reservation = Reservation(
             device_id=device.id,
             user_id=user.id,
-            start_time=datetime(2026, 4, 15, 10, 0, tzinfo=timezone.utc),
-            end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
+            start_time=datetime(2026, 4, 15, 10, 0, tzinfo=UTC),
+            end_time=datetime(2026, 4, 15, 12, 0, tzinfo=UTC),
         )
         session.add(reservation)
         await session.commit()

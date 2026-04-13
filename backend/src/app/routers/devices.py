@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import require_admin
 from ..config import DeviceStatus
 from ..db import get_session
-from ..models import Device
+from ..models import Device, User
 from ..schemas import DeviceCreate, DeviceResponse, DeviceUpdate
 from ..services import (
     create_device as create_device_service,
@@ -81,8 +81,9 @@ async def get_device(
 async def create_device(
     device_data: DeviceCreate,
     session: AsyncSession = Depends(get_session),
-    admin: Device = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ) -> Device:
+    _ = admin
     return await create_device_service(session, device_data)
 
 
@@ -91,8 +92,9 @@ async def update_device(
     device_id: str,
     device_data: DeviceUpdate,
     session: AsyncSession = Depends(get_session),
-    admin: Device = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ) -> Device:
+    _ = admin
     try:
         uuid_obj = uuid.UUID(device_id)
     except ValueError:
@@ -110,12 +112,13 @@ async def update_device(
     return await update_device_service(session, device, device_data)
 
 
-@router.delete("/{device_id}")
+@router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_device(
     device_id: str,
     session: AsyncSession = Depends(get_session),
-    admin: Device = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ) -> None:
+    _ = admin
     try:
         uuid_obj = uuid.UUID(device_id)
     except ValueError:
