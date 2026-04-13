@@ -42,6 +42,38 @@ def test_seed_guard_blocks_production(monkeypatch: pytest.MonkeyPatch) -> None:
         ensure_development_for_seed()
 
 
+def test_settings_require_explicit_core_config_in_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with pytest.raises(ValidationError, match="DATABASE_URL"):
+        Settings(_env_file=None)
+
+
+def test_settings_accept_explicit_core_config_from_env_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "ENVIRONMENT=production",
+                "DATABASE_URL=postgresql+asyncpg://prod_user:prod_password@db:5432/device_reservation",
+                "KEYCLOAK_URL=https://auth.example.test",
+                "KEYCLOAK_REALM=laboratory",
+                "KEYCLOAK_CLIENT_ID=device-reservation",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    cfg = Settings(_env_file=env_file)
+
+    assert cfg.is_production
+
+
 @pytest.mark.asyncio
 async def test_seed_dev_idempotent(engine, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "development")

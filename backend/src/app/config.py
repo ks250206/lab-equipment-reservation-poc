@@ -2,7 +2,7 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import ClassVar
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -113,6 +113,27 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.environment == "development"
+
+    @model_validator(mode="after")
+    def validate_required_production_settings(self) -> "Settings":
+        if not self.is_production:
+            return self
+
+        required_fields = {
+            "database_url": "DATABASE_URL",
+            "keycloak_url": "KEYCLOAK_URL",
+            "keycloak_realm": "KEYCLOAK_REALM",
+            "keycloak_client_id": "KEYCLOAK_CLIENT_ID",
+        }
+        missing = [
+            env_name
+            for field_name, env_name in required_fields.items()
+            if field_name not in self.model_fields_set
+        ]
+        if missing:
+            joined = ", ".join(missing)
+            raise ValueError(f"ENVIRONMENT=production では次の設定を明示してください: {joined}")
+        return self
 
     UserRole: ClassVar[type[UserRole]] = UserRole
     DeviceStatus: ClassVar[type[DeviceStatus]] = DeviceStatus

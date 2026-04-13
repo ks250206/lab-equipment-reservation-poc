@@ -95,7 +95,9 @@ async def test_list_device_reservations_filters_by_window(device_reservations_cl
 
 
 @pytest.mark.asyncio
-async def test_list_device_reservations_shows_own_cancelled_excludes_others(device_reservations_client):
+async def test_list_device_reservations_shows_own_cancelled_excludes_others(
+    device_reservations_client,
+):
     client, session, owner = device_reservations_client
     other = User(keycloak_id="other-cancel-view")
     session.add(other)
@@ -162,7 +164,9 @@ async def test_list_device_reservations_shows_own_cancelled_excludes_others(devi
 
 
 @pytest.mark.asyncio
-async def test_list_device_reservations_calendar_mode_hides_all_cancelled(device_reservations_client):
+async def test_list_device_reservations_calendar_mode_hides_all_cancelled(
+    device_reservations_client,
+):
     client, session, owner = device_reservations_client
     device = Device(name="カレンダー除外装置")
     session.add(device)

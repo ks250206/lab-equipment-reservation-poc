@@ -46,7 +46,9 @@ async def list_reservations(
     to: datetime | None = Query(None),
     include_cancelled: bool = Query(
         True,
-        description="ステータス未指定時: false のときキャンセル行を除く（既定 true でキャンセルも含む）",
+        description=(
+            "ステータス未指定時: false のときキャンセル行を除く（既定 true でキャンセルも含む）"
+        ),
     ),
     favorites_only: bool = Query(False, description="お気に入り登録した装置の予約に限定"),
     page: int = Query(1, ge=1, description="1 始まりのページ番号"),

@@ -199,7 +199,7 @@ async def get_optional_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(optional_http_bearer),
     session: AsyncSession = Depends(get_session),
 ) -> User | None:
-    """`Authorization` があるときだけ JWT を検証しユーザーを返す（装置一覧の個人向けフィルタ等）。"""
+    """`Authorization` があるときだけ JWT を検証し、ユーザーを返す。"""
     if credentials is None:
         return None
     payload = await decode_token(credentials.credentials)

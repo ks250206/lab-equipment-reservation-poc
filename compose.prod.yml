@@ -2,17 +2,31 @@
 # （postgres_data ボリューム内。コンテナ再起動後も保持）
 # 初回 postgres ボリューム作成時のみ docker/postgres/init が実行される（keycloak DB 作成）
 services:
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env before running the production profile}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env before running the production profile}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env before running the production profile}
+      KC_DB_USERNAME: ${KC_DB_USERNAME:?Set KC_DB_USERNAME in .env before running the production profile}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?Set KC_DB_PASSWORD in .env before running the production profile}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:?Set POSTGRES_USER in .env before running the production profile} -d ${POSTGRES_DB:?Set POSTGRES_DB in .env before running the production profile}",
+        ]
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: device-reservation-keycloak
     command: start-dev
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?Set KEYCLOAK_ADMIN in .env before running the production profile}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env before running the production profile}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: keycloak_dev_password
+      KC_DB_USERNAME: ${KC_DB_USERNAME:?Set KC_DB_USERNAME in .env before running the production profile}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?Set KC_DB_PASSWORD in .env before running the production profile}
       KC_HOSTNAME: localhost
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"

@@ -28,12 +28,12 @@ from ..services import (
     delete_device as delete_device_service,
 )
 from ..services import (
-    get_device as get_device_service,
-)
-from ..services import (
     favorite_device_ids_for_user,
     get_facets,
     search_devices_paginated,
+)
+from ..services import (
+    get_device as get_device_service,
 )
 from ..services import (
     update_device as update_device_service,
@@ -56,7 +56,9 @@ async def list_devices(
     q: str | None = Query(None, description="Search query"),
     category: str | None = Query(None, description="Filter by category"),
     location: str | None = Query(None, description="Filter by location"),
-    device_status: DeviceStatus | None = Query(None, alias="status", description="Filter by status"),
+    device_status: DeviceStatus | None = Query(
+        None, alias="status", description="Filter by status"
+    ),
     used_by_me: bool = Query(False, description="ログインユーザーが一度でも予約した装置に限定"),
     favorites_only: bool = Query(False, description="ログインユーザーがお気に入りの装置に限定"),
     page: int = Query(1, ge=1, description="1 始まりのページ番号"),
@@ -69,7 +71,9 @@ async def list_devices(
     if (used_by_me or favorites_only) and optional_user is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="used_by_me および favorites_only にはログイン（Authorization: Bearer）が必要です",
+            detail=(
+                "used_by_me および favorites_only にはログイン（Authorization: Bearer）が必要です"
+            ),
         )
     personal_id = optional_user.id if optional_user is not None else None
     need_personal_clause = used_by_me or favorites_only

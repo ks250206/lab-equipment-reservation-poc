@@ -26,6 +26,8 @@ PoC の `compose.prod.yml` は **単一ホスト上の検証**向け（Keycloak 
 | フロント | `VITE_KEYCLOAK_URL` 等 | ブラウザから到達可能な Keycloak の URL（本番オリジン） |
 | Keycloak シード用（開発のみ） | `KEYCLOAK_SEED_*` | **本番では使わない**（`just seed-dev` は `ENVIRONMENT=production` で拒否される） |
 
+`backend/src/app/config.py` は `ENVIRONMENT=production` のとき、**`DATABASE_URL` / `KEYCLOAK_URL` / `KEYCLOAK_REALM` / `KEYCLOAK_CLIENT_ID` が明示されていないと起動を止める**。`compose.prod.yml` も同様に、**`POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` / `KC_DB_USERNAME` / `KC_DB_PASSWORD`** が未設定なら起動しない。
+
 シークレットは **Git に入れない**（シークレットマネージャ、Kubernetes Secret、CI のマスク変数など）。
 
 ## 3. 依存サービス（本番相当の考え方）

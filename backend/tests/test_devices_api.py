@@ -273,9 +273,7 @@ async def test_list_devices_personal_filters_require_login(devices_list_public_c
 @pytest.mark.asyncio
 async def test_list_devices_filter_used_by_me_and_favorites(devices_client):
     client, session = devices_client
-    admin_result = await session.execute(
-        select(User).where(User.keycloak_id == "devices-admin")
-    )
+    admin_result = await session.execute(select(User).where(User.keycloak_id == "devices-admin"))
     admin = admin_result.scalar_one()
 
     d_used = Device(name="UsedByAdmin", category="c1", location="loc-a")
@@ -299,14 +297,19 @@ async def test_list_devices_filter_used_by_me_and_favorites(devices_client):
     session.add(UserFavoriteDevice(user_id=admin.id, device_id=d_fav_only.id))
     await session.commit()
 
-    used_ids = {row["id"] for row in (await client.get("/api/devices", params={"used_by_me": "true"})).json()["items"]}
+    used_ids = {
+        row["id"]
+        for row in (await client.get("/api/devices", params={"used_by_me": "true"})).json()["items"]
+    }
     assert str(d_used.id) in used_ids
     assert str(d_unused.id) not in used_ids
     assert str(d_fav_only.id) not in used_ids
 
     fav_ids = {
         row["id"]
-        for row in (await client.get("/api/devices", params={"favorites_only": "true"})).json()["items"]
+        for row in (await client.get("/api/devices", params={"favorites_only": "true"})).json()[
+            "items"
+        ]
     }
     assert str(d_fav_only.id) in fav_ids
     assert str(d_used.id) not in fav_ids
