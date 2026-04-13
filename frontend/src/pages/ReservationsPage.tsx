@@ -11,6 +11,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { ReservationDetailDialog } from "@/components/device/ReservationDetailDialog";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
 import { ReservationStatusTag } from "@/components/StatusTags";
+import { useAppToast } from "@/toast/AppToastProvider";
 import { localDatetimeInputToIso } from "@/lib/datetimeLocal";
 import {
   parseReservationsPageSearch,
@@ -26,6 +27,7 @@ const RESERVATION_STATUS_OPTIONS = [
 ] as const;
 
 export function ReservationsPage() {
+  const toast = useAppToast();
   const { authenticated, ready, login, getValidToken } = useAuth();
   const queryClient = useQueryClient();
   const locationRoute = useLocation();
@@ -176,6 +178,7 @@ export function ReservationsPage() {
       await updateReservation(token, id, { status: "cancelled" });
     },
     onSuccess: () => {
+      toast("予約をキャンセルしました");
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
       void queryClient.invalidateQueries({ queryKey: ["device-reservations"] });
     },
@@ -254,11 +257,11 @@ export function ReservationsPage() {
           <label className="flex items-end gap-2 pb-0.5">
             <input
               type="checkbox"
-              checked={includeCancelled}
-              onChange={(e) => setIncludeCancelled(e.target.checked)}
+              checked={!includeCancelled}
+              onChange={(e) => setIncludeCancelled(!e.target.checked)}
               className="h-4 w-4 rounded border-zinc-300"
             />
-            <span className="text-sm text-zinc-700">キャンセル済みも含める</span>
+            <span className="text-sm text-zinc-700">キャンセル済みを一覧から隠す</span>
           </label>
           <label className="flex items-center gap-2 md:col-span-2">
             <input

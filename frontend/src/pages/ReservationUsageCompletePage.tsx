@@ -8,8 +8,10 @@ import { completeReservationUsage, fetchDevices, fetchReservations } from "@/api
 import type { PageSize } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
+import { useAppToast } from "@/toast/AppToastProvider";
 
 export function ReservationUsageCompletePage() {
+  const toast = useAppToast();
   const { authenticated, ready, login, getValidToken } = useAuth();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -65,6 +67,7 @@ export function ReservationUsageCompletePage() {
     },
     onSuccess: () => {
       setActionError(null);
+      toast("利用完了を報告しました");
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
       void queryClient.invalidateQueries({ queryKey: ["reservations-usage-complete"] });
       void queryClient.invalidateQueries({ queryKey: ["device-reservations"] });

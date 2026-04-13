@@ -20,7 +20,7 @@ export function parseReservationsPageSearch(search: string): ReservationsPageSea
   const psRaw = parseInt(sp.get("page_size") ?? "50", 10);
   const page_size = PAGE_SIZES.includes(psRaw as PageSize) ? (psRaw as PageSize) : 50;
   const ic = sp.get("include_cancelled");
-  const include_cancelled = ic === "1" || ic === "true";
+  const include_cancelled = !(ic === "0" || ic === "false");
 
   return {
     device_id: sp.get("device_id") ?? "",
@@ -40,7 +40,7 @@ export function serializeReservationsPageSearch(args: ReservationsPageSearchStat
   if (args.reservation_status) sp.set("reservation_status", args.reservation_status);
   if (args.reservation_from.trim()) sp.set("reservation_from", args.reservation_from.trim());
   if (args.reservation_to.trim()) sp.set("reservation_to", args.reservation_to.trim());
-  if (args.include_cancelled) sp.set("include_cancelled", "1");
+  if (!args.include_cancelled) sp.set("include_cancelled", "0");
   if (args.favorites_only) sp.set("favorites_only", "1");
   if (args.page !== 1) sp.set("page", String(args.page));
   if (args.page_size !== 50) sp.set("page_size", String(args.page_size));

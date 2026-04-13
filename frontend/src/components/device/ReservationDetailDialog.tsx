@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 
 import { updateReservation } from "@/api/client";
 import { ReservationStatusTag, RESERVATION_STATUS_LABEL } from "@/components/StatusTags";
+import { useAppToast } from "@/toast/AppToastProvider";
 import type { Reservation } from "@/api/types";
 import { isoToDatetimeLocalValue, localDatetimeInputToIso } from "@/lib/datetimeLocal";
 
@@ -30,6 +31,7 @@ export function ReservationDetailDialog({
   deviceId,
   getValidToken,
 }: ReservationDetailDialogProps) {
+  const toast = useAppToast();
   const queryClient = useQueryClient();
   const [startLocal, setStartLocal] = useState("");
   const [endLocal, setEndLocal] = useState("");
@@ -63,8 +65,11 @@ export function ReservationDetailDialog({
         status,
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setFormError(null);
+      if (data.status === "cancelled") {
+        toast("予約をキャンセルしました");
+      }
       void queryClient.invalidateQueries({ queryKey: ["device-reservations", deviceId] });
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
       onOpenChange(false);

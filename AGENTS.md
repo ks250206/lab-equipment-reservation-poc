@@ -70,6 +70,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 23. サムネ画像リンク・完了予約の削除／更新禁止 | `it23-thumbnail-link-completed-lock` | 完了 |
 | 24. 予約重複メッセージ・一覧整理・お気に入り絞り込み・利用完了報告 | `it24-reservation-ux-complete-flow` | 完了 |
 | 25. discontinued・ステータスタグ・キャンセル表示・論理削除 | `it25-discontinued-status-tags-cancel` | 完了 |
+| 26. 予約一覧のキャンセル表示既定・トースト通知 | `it26-reservations-toast` | 完了 |
 
 ---
 

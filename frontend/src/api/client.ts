@@ -148,7 +148,7 @@ export async function fetchReservations(
       reservation_status: o.reservation_status,
       from: o.from,
       to: o.to,
-      ...(o.include_cancelled ? { include_cancelled: "true" } : {}),
+      ...(o.include_cancelled === false ? { include_cancelled: "false" } : {}),
       ...(o.favorites_only ? { favorites_only: "true" } : {}),
       ...(o.page !== undefined ? { page: String(o.page) } : {}),
       ...(o.page_size !== undefined ? { page_size: String(o.page_size) } : {}),

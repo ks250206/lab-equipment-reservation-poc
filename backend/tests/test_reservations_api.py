@@ -188,6 +188,44 @@ async def test_put_reservation_cancelled_skips_overlap(reservation_client):
 
 
 @pytest.mark.asyncio
+async def test_list_reservations_includes_cancelled_when_no_status_filter(reservation_client):
+    client, session, owner = reservation_client
+    device = Device(name="キャンセル表示装置")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(device.id),
+            "start_time": "2026-08-10T10:00:00Z",
+            "end_time": "2026-08-10T11:00:00Z",
+        },
+    )
+    cancelled = await client.post(
+        "/api/reservations",
+        json={
+            "device_id": str(device.id),
+            "start_time": "2026-08-10T12:00:00Z",
+            "end_time": "2026-08-10T13:00:00Z",
+        },
+    )
+    assert cancelled.status_code == 200
+    cid = cancelled.json()["id"]
+    put = await client.put(f"/api/reservations/{cid}", json={"status": "cancelled"})
+    assert put.status_code == 200
+
+    default_list = await client.get("/api/reservations")
+    assert default_list.status_code == 200
+    assert default_list.json()["total"] == 2
+
+    hidden = await client.get("/api/reservations", params={"include_cancelled": "false"})
+    assert hidden.status_code == 200
+    assert hidden.json()["total"] == 1
+
+
+@pytest.mark.asyncio
 async def test_list_reservations_only_own(reservation_client):
     client, session, owner = reservation_client
     device = Device(name="一覧装置")
