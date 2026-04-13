@@ -77,6 +77,8 @@ cp frontend/.env.example frontend/.env
 
 API が **ポート 8000 使用中**で起動しない → `just backend-free-port` または [doc/local-development.md](doc/local-development.md) の「ポート 8000」節。
 
+Podman で **`just deps-up` が container_name 変更後に失敗**する → `just deps-reset-podman` のあと再度 `just deps-up`（詳細は [doc/local-development.md](doc/local-development.md) の該当節）。
+
 ## ディレクトリ構成（抜粋）
 
 ```

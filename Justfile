@@ -35,6 +35,11 @@ deps-down volumes="":
 	fi
 	bash "{{root}}/scripts/compose.sh" "${args[@]}"
 
+# Podman のみ: container_name 変更後など compose が不整合なとき、旧コンテナと既定ネットを掃除してから deps-up しやすくする
+[group('deps')]
+deps-reset-podman:
+	bash "{{root}}/scripts/deps_reset_podman.sh"
+
 [group('deps')]
 deps-ps:
 	bash "{{root}}/scripts/compose.sh" ps

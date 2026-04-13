@@ -24,6 +24,22 @@
 
 終了: 各 dev サーバで `Ctrl+C` のあと、コンテナを止めるなら `just deps-down`。
 
+### `just deps-up` が Podman で失敗するとき（container_name 変更後など）
+
+次のようなログが出る場合は、**旧名（`device-reservation-*`）のコンテナ**や **`(ディレクトリ名)_default` ネットワーク**が残って compose と食い違っていることが多いです。
+
+- `no container with name or ID "equipment-reservation-postgres" found`
+- `network is being used` / `has associated containers with it`
+- `proxy already running`（Podman Machine の不調）
+
+**手順（開発・Podman 既定）**:
+
+1. リポジトリルートで **`just deps-reset-podman`** … `compose down` に加え、新旧の固定 `container_name` を `podman rm -f` し、既定ブリッジネットを削除試行する。
+2. 再度 **`just deps-up`**。
+3. まだ `proxy already running` になる場合は **`podman machine stop`** のあと **`podman machine start`**（必要ならホスト再起動）。
+
+Docker を使っている場合は `DEV_CONTAINER_RUNTIME=docker` のまま、該当コンテナを `docker rm -f` してから `just deps-down` → `just deps-up` で同等に戻せます。
+
 ## 2 回目以降
 
 ```bash
