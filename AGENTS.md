@@ -65,6 +65,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 18. 装置一覧の予約フィルター（ユーザー名・期間）とパンくず・カテゴリ／場所リンク | `it18-device-list-filters-breadcrumb` | 完了 |
 | 19. 装置写真（MinIO・PNG/JPEG 検証）と一覧表示モード | `it19-device-images-minio` | 完了 |
 | 20. 装置一覧 URL 同期・予約一覧のページング／フィルター／編集 | `it20-device-list-url-reservations-edit` | 完了 |
+| 21. リロード後の Keycloak セッション復元（silent check-sso） | `it21-keycloak-reload-session` | 完了 |
 
 ---
 

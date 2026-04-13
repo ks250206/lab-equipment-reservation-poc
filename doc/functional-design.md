@@ -185,7 +185,7 @@ ER 図は PoC では省略するが、上記 FK 関係を正とする。
 ### 4.2 JWT フロー
 
 1. フロントエンドが Keycloak で認証する。
-2. アクセストークンを保存する（実装方針は [@doc/architecture.md](architecture.md) / フロント実装に従う）。
+2. アクセストークンは **keycloak-js** がメモリ上で保持する。初回および **ページリロード時**は `init({ onLoad: "check-sso", silentCheckSsoRedirectUri })` により、Keycloak のブラウザセッションが残っていれば非表示フローでトークンを再取得する（詳細は [@doc/keycloak-setup.md](keycloak-setup.md)）。
 3. API 呼び出し時に `Authorization: Bearer <token>` を付与する。
 4. バックエンドが JWKS で検証し、`sub` 等からユーザーを特定または作成する。
 

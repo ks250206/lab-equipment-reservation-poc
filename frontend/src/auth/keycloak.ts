@@ -13,10 +13,15 @@ let initPromise: Promise<boolean> | null = null;
 /** 同一インスタンスで init を複数回呼ばない */
 export function initKeycloakClient(): Promise<boolean> {
   if (!initPromise) {
-    // onLoad: "check-sso" はサードパーティ Cookie 制限で iframe が無効化されると、
-    // prompt=none のリダイレクトだけが走り未ログイン時に失敗しやすい（ログインボタン以前に詰まる）。
-    // 明示ログインは keycloak.login() に任せ、コールバックは初回 init の URL 解析で処理する。
+    // リロード後も Keycloak のブラウザセッションがあればトークンを復元する。
+    // `onLoad` なしの init はコールバック URL が無い限りトークンを復元しないため、
+    // フルリロードのたびに未ログイン扱いになる。
+    // `check-sso` + silent redirect は非表示 iframe で prompt=none を行い、
+    // `checkLoginIframe: false` でサードパーティ Cookie に依存するログイン状態 iframe は使わない。
     initPromise = keycloak.init({
+      onLoad: "check-sso",
+      silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+      checkLoginIframe: false,
       pkceMethod: "S256",
       responseMode: "query",
       enableLogging: import.meta.env.DEV,

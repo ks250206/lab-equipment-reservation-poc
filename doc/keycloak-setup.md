@@ -16,7 +16,7 @@
 |------|------------------|
 | **レルム** | ユーザーやクライアントのまとまり。既定は `master`。`VITE_KEYCLOAK_REALM` と一致させる。 |
 | **クライアント** | アプリ単位の登録。SPA 用に **公開クライアント**（クライアントシークレットなし）で作る。 |
-| **Valid redirect URIs** | ログイン後にブラウザを戻してよい URL。Vite 開発サーバなら `http://localhost:5173` 配下。 |
+| **Valid redirect URIs** | ログイン後にブラウザを戻してよい URL。Vite 開発サーバなら `http://localhost:5173` 配下。フロントは **`/silent-check-sso.html`**（`public/` 配信）を **check-sso** 用のリダイレクト先に使うため、`http://localhost:5173/*` のようなワイルドカードでカバーされることを確認する。 |
 | **Web origins** | ブラウザの CORS 用。フロントのオリジン（スキーム＋ホスト＋ポート）を登録する。 |
 
 ## 診断: エクスポート JSON でこうなっていたら NG（PKCE 以前の問題）

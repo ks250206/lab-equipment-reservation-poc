@@ -49,5 +49,6 @@
 | 18 | `iterations/it-18-device-list-filters-breadcrumb/` | 装置一覧の予約フィルターとパンくず |
 | 19 | `iterations/it-19-device-images-minio/` | 装置写真（MinIO）と一覧表示モード |
 | 20 | `iterations/it-20-device-list-url-reservations-edit/` | 装置一覧 URL 同期・予約一覧ページング／フィルター／編集 |
+| 21 | `iterations/it-21-keycloak-reload-session/` | リロード後の Keycloak セッション復元（silent check-sso） |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。
