@@ -46,5 +46,6 @@
 | 15 | `iterations/it-15-reservation-user-profile-seed/` | 予約リストのユーザー表示（DB プロフィール）とシード日付の 2 か月分散 |
 | 16 | `iterations/it-16-reservation-calendar-modal/` | リスト上ページネーション・カレンダー表示・予約モーダル |
 | 17 | `iterations/it-17-device-calendar-drag-reservation/` | 装置カレンダーのドラッグで予約作成 |
+| 18 | `iterations/it-18-device-list-filters-breadcrumb/` | 装置一覧の予約フィルターとパンくず |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。

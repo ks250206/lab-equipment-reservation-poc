@@ -62,6 +62,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 15. 予約リストのユーザー表示（DB プロフィール）とシード日付の 2 か月分散 | `it15-reservation-user-profile-seed` | 完了 |
 | 16. リスト上ページネーション・カレンダー（時刻+氏名・月省略）・予約詳細モーダル | `it16-reservation-calendar-modal` | 完了 |
 | 17. 装置カレンダーのドラッグで予約作成 | `it17-device-calendar-drag-reservation` | 完了 |
+| 18. 装置一覧の予約フィルター（ユーザー名・期間）とパンくず・カテゴリ／場所リンク | `it18-device-list-filters-breadcrumb` | 完了 |
 
 ---
 

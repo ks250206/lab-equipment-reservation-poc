@@ -1,26 +1,47 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { fetchDevices, fetchFacets } from "@/api/client";
 import type { PageSize } from "@/api/types";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { localDatetimeInputToIso } from "@/lib/datetimeLocal";
 
 export function DevicesPage() {
+  const locationRoute = useLocation();
   const [rawQuery, setRawQuery] = useState("");
   const [composition, setComposition] = useState(false);
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("");
+  const [rawReservationUser, setRawReservationUser] = useState("");
+  const [resUserComposition, setResUserComposition] = useState(false);
+  const [reservationFrom, setReservationFrom] = useState("");
+  const [reservationTo, setReservationTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
 
   const debouncedQuery = useDebouncedValue(rawQuery, composition);
+  const debouncedReservationUser = useDebouncedValue(rawReservationUser, resUserComposition);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(locationRoute.search);
+    setCategory(sp.get("category") ?? "");
+    setLocation(sp.get("location") ?? "");
+  }, [locationRoute.search]);
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, category, location, status]);
+  }, [
+    debouncedQuery,
+    category,
+    location,
+    status,
+    debouncedReservationUser,
+    reservationFrom,
+    reservationTo,
+  ]);
 
   useEffect(() => {
     setPage(1);
@@ -31,14 +52,45 @@ export function DevicesPage() {
     queryFn: () => fetchFacets({ q: debouncedQuery || undefined }),
   });
 
+  const reservationPeriodIso = useMemo(() => {
+    const a = reservationFrom.trim();
+    const b = reservationTo.trim();
+    if (!a || !b)
+      return { from: undefined as string | undefined, to: undefined as string | undefined };
+    try {
+      const fromIso = localDatetimeInputToIso(a);
+      const toIso = localDatetimeInputToIso(b);
+      if (new Date(fromIso).getTime() >= new Date(toIso).getTime()) {
+        return { from: undefined, to: undefined };
+      }
+      return { from: fromIso, to: toIso };
+    } catch {
+      return { from: undefined, to: undefined };
+    }
+  }, [reservationFrom, reservationTo]);
+
   const deviceQuery = useQuery({
-    queryKey: ["devices", debouncedQuery, category, location, status, page, pageSize],
+    queryKey: [
+      "devices",
+      debouncedQuery,
+      category,
+      location,
+      status,
+      debouncedReservationUser,
+      reservationPeriodIso.from,
+      reservationPeriodIso.to,
+      page,
+      pageSize,
+    ],
     queryFn: () =>
       fetchDevices({
         q: debouncedQuery || undefined,
         category: category || undefined,
         location: location || undefined,
         status: status || undefined,
+        reservation_user: debouncedReservationUser.trim() || undefined,
+        reservation_from: reservationPeriodIso.from,
+        reservation_to: reservationPeriodIso.to,
         page,
         page_size: pageSize,
       }),
@@ -128,6 +180,48 @@ export function DevicesPage() {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="block space-y-1 md:col-span-2">
+          <span className="text-sm font-medium text-zinc-700">
+            予約ユーザー（氏名・メールの一部）
+          </span>
+          <input
+            type="search"
+            value={rawReservationUser}
+            onChange={(e) => setRawReservationUser(e.target.value)}
+            onCompositionStart={() => setResUserComposition(true)}
+            onCompositionEnd={() => setResUserComposition(false)}
+            placeholder="例: 山田 または メールの一部"
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+            autoComplete="off"
+          />
+          <span className="text-xs text-zinc-500">
+            入力確定から 300ms 後に反映します（IME 変換中は待ちます）
+          </span>
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-zinc-700">予約が重なる期間・開始</span>
+          <input
+            type="datetime-local"
+            value={reservationFrom}
+            onChange={(e) => setReservationFrom(e.target.value)}
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-zinc-700">予約が重なる期間・終了</span>
+          <input
+            type="datetime-local"
+            value={reservationTo}
+            onChange={(e) => setReservationTo(e.target.value)}
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <span className="text-xs text-zinc-500">
+            開始・終了の両方を入れたときだけ期間で絞り込みます。
+          </span>
         </label>
       </div>
 

@@ -1,6 +1,7 @@
 """装置 API の結合テスト（認証は依存性オーバーライド）。"""
 
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -8,10 +9,10 @@ from jwt_payload_utils import jwt_like_payload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.auth import get_current_user, get_token_payload
-from app.config import settings
+from app.config import ReservationStatus, settings
 from app.db import Base, get_session
 from app.main import app
-from app.models import Device, User
+from app.models import Device, Reservation, User
 
 
 @pytest.fixture
@@ -225,3 +226,84 @@ async def test_device_write_requires_admin(devices_anon_client):
         json={"name": "NG", "description": None, "location": None, "category": None},
     )
     assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_list_devices_filter_by_reservation_user_and_window(devices_client):
+    client, session = devices_client
+    other = User(
+        keycloak_id="resv-filter-user", name="山田テスト", email="yamada-filter@example.com"
+    )
+    session.add(other)
+    await session.flush()
+
+    d_match = Device(name="HasRes", category="c1", location="loc-a")
+    d_other = Device(name="NoRes", category="c2", location="loc-b")
+    session.add_all([d_match, d_other])
+    await session.flush()
+
+    t0 = datetime(2030, 6, 1, 10, 0, tzinfo=UTC)
+    t1 = datetime(2030, 6, 1, 11, 0, tzinfo=UTC)
+    session.add(
+        Reservation(
+            device_id=d_match.id,
+            user_id=other.id,
+            start_time=t0,
+            end_time=t1,
+            purpose="試験",
+            status=ReservationStatus.CONFIRMED,
+        )
+    )
+    await session.commit()
+
+    match_id = str(d_match.id)
+    other_id = str(d_other.id)
+
+    r_user = await client.get("/api/devices", params={"reservation_user": "yamada-filter"})
+    assert r_user.status_code == 200
+    user_ids = {row["id"] for row in r_user.json()["items"]}
+    assert match_id in user_ids
+    assert other_id not in user_ids
+
+    r_nomatch = await client.get(
+        "/api/devices", params={"reservation_user": "存在しない名前_xyz_993311"}
+    )
+    assert r_nomatch.status_code == 200
+    nomatch_ids = {row["id"] for row in r_nomatch.json()["items"]}
+    assert match_id not in nomatch_ids
+
+    r_win = await client.get(
+        "/api/devices",
+        params={
+            "reservation_from": "2030-06-01T09:30:00Z",
+            "reservation_to": "2030-06-01T10:30:00Z",
+        },
+    )
+    assert r_win.status_code == 200
+    win_ids = {row["id"] for row in r_win.json()["items"]}
+    assert match_id in win_ids
+    assert other_id not in win_ids
+
+    r_win_miss = await client.get(
+        "/api/devices",
+        params={
+            "reservation_from": "2030-06-02T00:00:00Z",
+            "reservation_to": "2030-06-02T01:00:00Z",
+        },
+    )
+    assert r_win_miss.status_code == 200
+    miss_ids = {row["id"] for row in r_win_miss.json()["items"]}
+    assert match_id not in miss_ids
+
+    r_combo = await client.get(
+        "/api/devices",
+        params={
+            "reservation_user": "yamada-filter",
+            "reservation_from": "2030-06-01T00:00:00Z",
+            "reservation_to": "2030-06-02T00:00:00Z",
+        },
+    )
+    assert r_combo.status_code == 200
+    combo_ids = {row["id"] for row in r_combo.json()["items"]}
+    assert match_id in combo_ids
+    assert other_id not in combo_ids

@@ -71,6 +71,15 @@ async def list_devices(
     category: str | None = Query(None, description="Filter by category"),
     location: str | None = Query(None, description="Filter by location"),
     status: DeviceStatus | None = Query(None, description="Filter by status"),
+    reservation_user: str | None = Query(
+        None, description="予約ユーザーの氏名・メールに部分一致する予約を持つ装置に限定"
+    ),
+    reservation_from: datetime | None = Query(
+        None, description="予約期間フィルタ開始（UTC 解釈）。`reservation_to` と併用"
+    ),
+    reservation_to: datetime | None = Query(
+        None, description="予約期間フィルタ終了（UTC 解釈）。`reservation_from` と併用"
+    ),
     page: int = Query(1, ge=1, description="1 始まりのページ番号"),
     page_size: ListPageSize = Query(
         ListPageSize.FIFTY, description="1 ページあたり件数（20 / 50 / 100）"
@@ -83,6 +92,9 @@ async def list_devices(
         category=category,
         location=location,
         status=status,
+        reservation_user=reservation_user,
+        reservation_from=reservation_from,
+        reservation_to=reservation_to,
         page=page,
         page_size=int(page_size),
     )

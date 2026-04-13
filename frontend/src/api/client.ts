@@ -33,6 +33,9 @@ export async function fetchDevices(filters: {
   category?: string;
   location?: string;
   status?: string;
+  reservation_user?: string;
+  reservation_from?: string;
+  reservation_to?: string;
   page?: number;
   page_size?: PageSize;
 }): Promise<Paginated<Device>> {
@@ -41,6 +44,9 @@ export async function fetchDevices(filters: {
     category: filters.category,
     location: filters.location,
     status: filters.status,
+    reservation_user: filters.reservation_user,
+    reservation_from: filters.reservation_from,
+    reservation_to: filters.reservation_to,
     page: filters.page !== undefined ? String(filters.page) : undefined,
     page_size: filters.page_size !== undefined ? String(filters.page_size) : undefined,
   };
