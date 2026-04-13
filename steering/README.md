@@ -55,5 +55,6 @@
 | 24 | `iterations/it-24-reservation-ux-complete-flow/` | 予約重複メッセージ・一覧整理・お気に入り絞り込み・利用完了報告 |
 | 25 | `iterations/it-25-discontinued-status-tags-cancel/` | discontinued・ステータスタグ・キャンセル表示・論理削除 |
 | 26 | `iterations/it-26-reservations-toast/` | 予約一覧のキャンセル表示既定・トースト通知 |
+| 27 | `iterations/it-27-docs-implementation-align/` | README・doc と実装の整合 |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。

@@ -84,6 +84,7 @@ frontend/
 │   ├── api/                # fetch クライアント・型
 │   ├── components/
 │   ├── hooks/              # 例: IME 対応デバウンス
+│   ├── toast/              # アプリ全体の Toast（Radix）・`useAppToast`
 │   ├── pages/
 │   ├── env.ts
 │   └── main.tsx

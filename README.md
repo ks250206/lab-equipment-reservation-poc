@@ -18,7 +18,7 @@
 ## 技術スタック（概要）
 
 - **Backend**: Python 3.13, FastAPI, PostgreSQL, Keycloak (JWT), MinIO（S3 互換・装置画像）
-- **Frontend**: React 19, Vite, Tailwind, shadcn/ui
+- **Frontend**: React 19, Vite, Tailwind CSS, Radix UI（primitives）, TanStack Query
 - **Dev**: Nix (flake), pnpm, uv, Podman（`just deps-*` 既定）または Docker
 
 ## クイックスタート（最短）

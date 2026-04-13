@@ -107,6 +107,7 @@ pnpm run test
 - **IME 変換中はデバウンスしない**。
 - サーバー状態は **React Query** で管理する。
 - 認証状態は **React Context** で管理する。
+- 主要な操作の成功フィードバックは **Radix Toast**（[frontend/src/toast/AppToastProvider.tsx](../frontend/src/toast/AppToastProvider.tsx) の `useAppToast`）で行う（例: 予約キャンセル、利用完了報告）。
 
 ## 7. イテレーション計画（高レベル）
 
