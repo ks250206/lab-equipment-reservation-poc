@@ -118,6 +118,7 @@ _FLOORS = ("材料棟 1F", "材料棟 2F", "実験棟 3F")
 # 一部だけメンテ・利用不可にして一覧のバリエーションを付ける
 _MAINTENANCE_KEYS = {("sem", 2), ("xps", 0), ("print3d", 1)}
 _UNAVAILABLE_KEYS = {("ion_mill", 2)}
+_DISCONTINUED_KEYS = {("battery", 0), ("tg_dta", 1)}
 
 
 def _build_device_rows() -> list[dict[str, object]]:
@@ -128,6 +129,8 @@ def _build_device_rows() -> list[dict[str, object]]:
             status = DeviceStatus.AVAILABLE
             if (slug, n) in _UNAVAILABLE_KEYS:
                 status = DeviceStatus.UNAVAILABLE
+            elif (slug, n) in _DISCONTINUED_KEYS:
+                status = DeviceStatus.DISCONTINUED
             elif (slug, n) in _MAINTENANCE_KEYS:
                 status = DeviceStatus.MAINTENANCE
             rows.append(
@@ -182,6 +185,12 @@ def build_reservation_seed_rows(*, at: datetime | None = None) -> list[dict[str,
             start = range_start + timedelta(seconds=j * step_sec)
             end = start + one_h
             rid = uuid.uuid5(SEED_NAMESPACE, f"reservation:{device_id}:{j}")
+            if j % 17 == 0:
+                res_status = ReservationStatus.COMPLETED
+            elif j % 19 == 0:
+                res_status = ReservationStatus.CANCELLED
+            else:
+                res_status = ReservationStatus.CONFIRMED
             rows.append(
                 {
                     "id": rid,
@@ -190,7 +199,7 @@ def build_reservation_seed_rows(*, at: datetime | None = None) -> list[dict[str,
                     "start_time": start,
                     "end_time": end,
                     "purpose": f"シード予約 {j + 1}/{RESERVATIONS_PER_DEVICE}",
-                    "status": ReservationStatus.CONFIRMED,
+                    "status": res_status,
                 }
             )
     return rows

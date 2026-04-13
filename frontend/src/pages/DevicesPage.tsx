@@ -8,6 +8,7 @@ import type { Device, PageSize } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 import { DeviceImageSlot } from "@/components/device/DeviceImageSlot";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
+import { DeviceStatusTag } from "@/components/StatusTags";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   parseDevicesPageSearch,
@@ -116,8 +117,7 @@ export function DevicesPage() {
       authenticated,
     ],
     queryFn: async () => {
-      const token =
-        authenticated && ready ? await getValidToken().catch(() => null) : null;
+      const token = authenticated && ready ? await getValidToken().catch(() => null) : null;
       return fetchDevices(
         {
           q: debouncedQuery || undefined,
@@ -167,11 +167,17 @@ export function DevicesPage() {
                   />
                 ) : null}
                 <div className="min-w-0">
-                  <Link to={`/devices/${d.id}`} className="font-medium text-blue-800 hover:underline">
+                  <Link
+                    to={`/devices/${d.id}`}
+                    className="font-medium text-blue-800 hover:underline"
+                  >
                     {d.name}
                   </Link>
-                  <p className="text-xs text-zinc-500">
-                    {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                    <span>
+                      {d.category ?? "—"} / {d.location ?? "—"}
+                    </span>
+                    <DeviceStatusTag status={d.status} />
                   </p>
                 </div>
               </div>
@@ -212,8 +218,11 @@ export function DevicesPage() {
                       {d.name}
                     </Link>
                   </div>
-                  <p className="text-xs text-zinc-500">
-                    {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                    <span>
+                      {d.category ?? "—"} / {d.location ?? "—"}
+                    </span>
+                    <DeviceStatusTag status={d.status} />
                   </p>
                   <p className="line-clamp-4 text-zinc-700">{d.description?.trim() || "—"}</p>
                 </div>
@@ -256,7 +265,9 @@ export function DevicesPage() {
               <p className="line-clamp-2 text-xs text-zinc-500">
                 {d.category ?? "—"} / {d.location ?? "—"}
               </p>
-              <p className="text-xs text-zinc-600">{d.status}</p>
+              <div className="pt-0.5">
+                <DeviceStatusTag status={d.status} />
+              </div>
             </div>
           </li>
         ))}

@@ -237,6 +237,7 @@ class TestReservationService:
         assert rows[0].device_id == device.id
 
     async def test_update_and_delete_reservation_service(self, session: AsyncSession):
+        from app.config import ReservationStatus
         from app.schemas import ReservationCreate, ReservationUpdate
         from app.services.reservations import (
             create_reservation,
@@ -272,7 +273,9 @@ class TestReservationService:
         assert re_times.start_time.tzinfo is not None
 
         await delete_reservation(session, re_times)
-        assert await get_reservation(session, res.id) is None
+        after = await get_reservation(session, res.id)
+        assert after is not None
+        assert after.status == ReservationStatus.CANCELLED
 
     async def test_delete_completed_reservation_raises(self, session: AsyncSession):
         from app.config import ReservationStatus

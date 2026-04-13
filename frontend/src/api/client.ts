@@ -165,6 +165,7 @@ export async function fetchDeviceReservations(
     from: string;
     to: string;
     includeCancelled?: boolean;
+    calendarMode?: boolean;
     mineOnly?: boolean;
     reservationStatus?: string;
     page?: number;
@@ -176,6 +177,7 @@ export async function fetchDeviceReservations(
       from: opts.from,
       to: opts.to,
       ...(opts.includeCancelled ? { include_cancelled: "true" } : {}),
+      ...(opts.calendarMode ? { calendar_mode: "true" } : {}),
       ...(opts.mineOnly ? { mine_only: "true" } : {}),
       ...(opts.reservationStatus ? { reservation_status: opts.reservationStatus } : {}),
       ...(opts.page !== undefined ? { page: String(opts.page) } : {}),
@@ -200,6 +202,7 @@ export async function fetchDeviceReservationsAllInRange(
       ...opts,
       page,
       page_size: pageSize,
+      calendarMode: true,
     });
     merged.push(...res.items);
     if (merged.length >= res.total || res.items.length === 0) {

@@ -249,7 +249,9 @@ async def test_delete_reservation(reservation_client):
     assert deleted.status_code == 204
 
     result = await session.execute(select(Reservation).where(Reservation.id == uuid.UUID(rid)))
-    assert result.scalar_one_or_none() is None
+    row = result.scalar_one_or_none()
+    assert row is not None
+    assert row.status == ReservationStatus.CANCELLED
 
 
 @pytest.mark.asyncio

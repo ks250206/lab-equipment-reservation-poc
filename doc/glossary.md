@@ -22,6 +22,7 @@
 | `available` | 利用可能 |
 | `maintenance` | メンテナンス中 |
 | `unavailable` | 利用不可 |
+| `discontinued` | 製造終了・廃止（新規予約の運用方針は画面・API で表現。PoC では一覧表示用の状態値） |
 
 ## 3. ステータス（予約）
 
@@ -30,6 +31,10 @@
 | `confirmed` | 確定（時間枠として有効） |
 | `cancelled` | キャンセル（重複判定から除外） |
 | `completed` | 利用完了（将来の運用拡張用） |
+
+**装置予約リストとキャンセル行**: リストでは **閲覧者本人の `cancelled` のみ**表示し、**他人の `cancelled` は表示しない**。カレンダーでは **`cancelled` を常に表示しない**（`GET .../reservations` の `calendar_mode=true`）。
+
+**予約の論理削除**: `DELETE /api/reservations/{id}` は物理削除ではなく、**`confirmed` を `cancelled` に更新**する（冪等）。フロントの予約一覧キャンセルは **`PUT` で `status: cancelled`** でもよい。
 
 ## 4. UI / UX 用語
 

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { updateReservation } from "@/api/client";
+import { ReservationStatusTag, RESERVATION_STATUS_LABEL } from "@/components/StatusTags";
 import type { Reservation } from "@/api/types";
 import { isoToDatetimeLocalValue, localDatetimeInputToIso } from "@/lib/datetimeLocal";
 
@@ -113,7 +114,7 @@ export function ReservationDetailDialog({
                   </div>
                   <div>
                     <p className="text-xs font-medium text-zinc-500">ステータス</p>
-                    <p className="text-zinc-800">{reservation.status}</p>
+                    <ReservationStatusTag status={reservation.status} />
                   </div>
                   <div>
                     <p className="text-xs font-medium text-zinc-500">目的</p>
@@ -159,7 +160,7 @@ export function ReservationDetailDialog({
                     >
                       {EDITABLE_RESERVATION_STATUSES.map((s) => (
                         <option key={s} value={s}>
-                          {s}
+                          {RESERVATION_STATUS_LABEL[s] ?? s}
                         </option>
                       ))}
                     </select>

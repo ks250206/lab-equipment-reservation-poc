@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, exists, func, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -61,11 +61,16 @@ def _reservation_device_window_where(
     window_start: datetime,
     window_end: datetime,
     *,
-    include_cancelled: bool,
-    mine_user_id: uuid.UUID | None = None,
-    status_filter: ReservationStatus | None = None,
+    mine_user_id: uuid.UUID | None,
+    status_filter: ReservationStatus | None,
+    viewer_user_id: uuid.UUID,
+    hide_all_cancelled: bool,
 ) -> tuple[Any, datetime, datetime]:
-    """窓と重なる予約行の WHERE 句（`window_start` < `window_end` を前提）。"""
+    """窓と重なる予約行の WHERE 句（`window_start` < `window_end` を前提）。
+
+    - カレンダー（hide_all_cancelled）: キャンセルは常に除外。
+    - リスト: 他人のキャンセルは除外。閲覧者本人のキャンセルは（絞り込み次第で）表示。
+    """
     ws = ensure_utc(window_start)
     we = ensure_utc(window_end)
     conds: list[Any] = [
@@ -75,10 +80,24 @@ def _reservation_device_window_where(
     ]
     if mine_user_id is not None:
         conds.append(Reservation.user_id == mine_user_id)
-    if status_filter is not None:
-        conds.append(Reservation.status == status_filter)
-    elif not include_cancelled:
+
+    if hide_all_cancelled:
         conds.append(Reservation.status != ReservationStatus.CANCELLED)
+    elif status_filter is not None:
+        if status_filter == ReservationStatus.CANCELLED:
+            conds.append(Reservation.status == ReservationStatus.CANCELLED)
+            conds.append(Reservation.user_id == viewer_user_id)
+        else:
+            conds.append(Reservation.status == status_filter)
+    else:
+        # 他人のキャンセルは出さない。閲覧者本人のキャンセルは include_cancelled に関わらず同じ。
+        conds.append(
+            or_(
+                Reservation.status != ReservationStatus.CANCELLED,
+                Reservation.user_id == viewer_user_id,
+            )
+        )
+
     return and_(*conds), ws, we
 
 
@@ -91,15 +110,19 @@ async def list_reservations_for_device_in_window(
     include_cancelled: bool = False,
     mine_user_id: uuid.UUID | None = None,
     status_filter: ReservationStatus | None = None,
+    viewer_user_id: uuid.UUID,
+    hide_all_cancelled: bool = False,
 ) -> Sequence[Reservation]:
     """装置の予約を時刻窓で取得（窓と重なる行）。`window_start` < `window_end` を前提とする。"""
+    _ = include_cancelled
     where_expr, _ws, _we = _reservation_device_window_where(
         device_id,
         window_start,
         window_end,
-        include_cancelled=include_cancelled,
         mine_user_id=mine_user_id,
         status_filter=status_filter,
+        viewer_user_id=viewer_user_id,
+        hide_all_cancelled=hide_all_cancelled,
     )
     q = (
         select(Reservation)
@@ -122,14 +145,18 @@ async def list_reservations_for_device_in_window_paginated(
     status_filter: ReservationStatus | None = None,
     page: int,
     page_size: int,
+    viewer_user_id: uuid.UUID,
+    hide_all_cancelled: bool = False,
 ) -> tuple[list[Reservation], int]:
+    _ = include_cancelled
     where_expr, _ws, _we = _reservation_device_window_where(
         device_id,
         window_start,
         window_end,
-        include_cancelled=include_cancelled,
         mine_user_id=mine_user_id,
         status_filter=status_filter,
+        viewer_user_id=viewer_user_id,
+        hide_all_cancelled=hide_all_cancelled,
     )
     count_stmt = select(func.count()).select_from(Reservation).where(where_expr)
     total = int(await session.scalar(count_stmt) or 0)
@@ -225,8 +252,14 @@ async def delete_reservation(
     if reservation.status == ReservationStatus.COMPLETED:
         msg = "Completed reservations cannot be deleted"
         raise ValueError(msg)
-    await session.delete(reservation)
-    await session.commit()
+    if reservation.status == ReservationStatus.CONFIRMED:
+        reservation.status = ReservationStatus.CANCELLED
+        await session.commit()
+        await session.refresh(reservation)
+        return
+    if reservation.status == ReservationStatus.CANCELLED:
+        await session.commit()
+        return
 
 
 async def check_time_overlap(

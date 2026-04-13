@@ -9,6 +9,7 @@ class TestDeviceStatus:
         assert DeviceStatus.AVAILABLE.value == "available"
         assert DeviceStatus.MAINTENANCE.value == "maintenance"
         assert DeviceStatus.UNAVAILABLE.value == "unavailable"
+        assert DeviceStatus.DISCONTINUED.value == "discontinued"
 
 
 class TestUserRole:

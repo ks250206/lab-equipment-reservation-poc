@@ -1,15 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Pencil } from "lucide-react";
+import { Ban, Pencil } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { deleteReservation, fetchDevices, fetchReservations } from "@/api/client";
+import { fetchDevices, fetchReservations, updateReservation } from "@/api/client";
 import type { PageSize, Reservation } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 import { ReservationDetailDialog } from "@/components/device/ReservationDetailDialog";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
+import { ReservationStatusTag } from "@/components/StatusTags";
 import { localDatetimeInputToIso } from "@/lib/datetimeLocal";
 import {
   parseReservationsPageSearch,
@@ -168,14 +169,15 @@ export function ReservationsPage() {
     if (page > totalPages) setPage(totalPages);
   }, [reservationsQuery.isSuccess, reservationsQuery.data, page, pageSize]);
 
-  const deleteMut = useMutation({
+  const cancelMut = useMutation({
     mutationFn: async (id: string) => {
       const token = await getValidToken();
       if (!token) throw new Error("ログイン情報が無効です");
-      await deleteReservation(token, id);
+      await updateReservation(token, id, { status: "cancelled" });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      void queryClient.invalidateQueries({ queryKey: ["device-reservations"] });
     },
   });
 
@@ -314,8 +316,9 @@ export function ReservationsPage() {
                         {format(new Date(r.start_time), "PPp", { locale: ja })} 〜{" "}
                         {format(new Date(r.end_time), "PPp", { locale: ja })}
                       </p>
-                      <p className="text-xs text-zinc-500">
-                        装置: {deviceNameById.get(r.device_id) ?? r.device_id} / {r.status}
+                      <p className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                        <span>装置: {deviceNameById.get(r.device_id) ?? r.device_id}</span>
+                        <ReservationStatusTag status={r.status} />
                       </p>
                       {r.purpose ? <p className="text-zinc-700">{r.purpose}</p> : null}
                     </div>
@@ -328,26 +331,26 @@ export function ReservationsPage() {
                       >
                         <Pencil className="h-4 w-4" aria-hidden />
                       </button>
-                      <button
-                        type="button"
-                        className={
-                          r.status === "completed"
-                            ? "cursor-not-allowed rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-sm text-zinc-400"
-                            : "text-sm text-red-700 underline"
-                        }
-                        disabled={deleteMut.isPending || r.status === "completed"}
-                        title={
-                          r.status === "completed" ? "完了済みの予約は削除できません" : undefined
-                        }
-                        onClick={() => {
-                          if (r.status === "completed") return;
-                          if (window.confirm("この予約を削除しますか？")) {
-                            deleteMut.mutate(r.id);
-                          }
-                        }}
-                      >
-                        削除
-                      </button>
+                      {r.status === "confirmed" ? (
+                        <button
+                          type="button"
+                          className="inline-flex rounded border border-red-200 bg-white p-2 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                          disabled={cancelMut.isPending}
+                          aria-label="予約をキャンセル"
+                          title="確定中の予約をキャンセルします"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "この予約をキャンセルしますか？（キャンセル後も一覧に残ります）",
+                              )
+                            ) {
+                              cancelMut.mutate(r.id);
+                            }
+                          }}
+                        >
+                          <Ban className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
                     </div>
                   </li>
                 ))

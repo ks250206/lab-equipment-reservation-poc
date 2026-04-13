@@ -15,6 +15,7 @@ class DeviceStatus(StrEnum):
     AVAILABLE = "available"
     MAINTENANCE = "maintenance"
     UNAVAILABLE = "unavailable"
+    DISCONTINUED = "discontinued"
 
 
 class ReservationStatus(StrEnum):

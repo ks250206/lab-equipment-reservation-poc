@@ -15,6 +15,7 @@ import { fetchDeviceReservations, fetchDeviceReservationsAllInRange } from "@/ap
 import type { PageSize, Reservation } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
+import { ReservationStatusTag } from "@/components/StatusTags";
 import {
   DeviceReservationSlotCreateDialog,
   type DeviceReservationCreateRange,
@@ -368,7 +369,9 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
                         <td className="border-b border-zinc-100 px-3 py-2">
                           {format(new Date(r.end_time), "PPp", { locale: ja })}
                         </td>
-                        <td className="border-b border-zinc-100 px-3 py-2">{r.status}</td>
+                        <td className="border-b border-zinc-100 px-3 py-2">
+                          <ReservationStatusTag status={r.status} />
+                        </td>
                         <td className="border-b border-zinc-100 px-3 py-2">
                           {r.purpose?.trim() ? r.purpose : "—"}
                         </td>

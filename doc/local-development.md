@@ -45,6 +45,10 @@ just frontend-dev     # 別ターミナル
 
 データを残したまま列だけ落とすマイグレーションは PoC では扱わない。
 
+### 装置 `status` ENUM に値を追加したあと（既存 Postgres）
+
+Alembic は無いため、**既存ボリュームの DB** に新しい ENUM 値（例: `discontinued`）を足すには、Postgres で **`ALTER TYPE ... ADD VALUE`** を手動実行するか、ボリュームを捨てて `just deps-up` → `just seed-dev` で作り直す。`create_all` だけでは既存 ENUM 型は更新されない。
+
 ## `just` 早見表
 
 一覧は `just` または `just --list`（`[deps]` / `[dev]` / `[prod]` / `[check]` など）。

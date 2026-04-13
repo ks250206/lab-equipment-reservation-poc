@@ -95,12 +95,15 @@ async def test_list_device_reservations_filters_by_window(device_reservations_cl
 
 
 @pytest.mark.asyncio
-async def test_list_device_reservations_excludes_cancelled_by_default(device_reservations_client):
+async def test_list_device_reservations_shows_own_cancelled_excludes_others(device_reservations_client):
     client, session, owner = device_reservations_client
+    other = User(keycloak_id="other-cancel-view")
+    session.add(other)
     device = Device(name="キャンセル装置")
     session.add(device)
     await session.commit()
     await session.refresh(device)
+    await session.refresh(other)
 
     session.add_all(
         [
@@ -116,7 +119,15 @@ async def test_list_device_reservations_excludes_cancelled_by_default(device_res
                 user_id=owner.id,
                 start_time=datetime(2026, 5, 10, 12, 0, tzinfo=UTC),
                 end_time=datetime(2026, 5, 10, 13, 0, tzinfo=UTC),
-                purpose="取消",
+                purpose="自分キャンセル",
+                status=ReservationStatus.CANCELLED,
+            ),
+            Reservation(
+                device_id=device.id,
+                user_id=other.id,
+                start_time=datetime(2026, 5, 10, 14, 0, tzinfo=UTC),
+                end_time=datetime(2026, 5, 10, 15, 0, tzinfo=UTC),
+                purpose="他人キャンセル",
                 status=ReservationStatus.CANCELLED,
             ),
         ]
@@ -132,8 +143,10 @@ async def test_list_device_reservations_excludes_cancelled_by_default(device_res
     )
     assert r.status_code == 200
     body = r.json()
-    assert body["total"] == 1
-    assert len(body["items"]) == 1
+    assert body["total"] == 2
+    assert len(body["items"]) == 2
+    purposes = {row["purpose"] for row in body["items"]}
+    assert purposes == {"有効", "自分キャンセル"}
 
     r2 = await client.get(
         f"/api/devices/{device.id}/reservations",
@@ -146,7 +159,49 @@ async def test_list_device_reservations_excludes_cancelled_by_default(device_res
     assert r2.status_code == 200
     b2 = r2.json()
     assert b2["total"] == 2
-    assert len(b2["items"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_list_device_reservations_calendar_mode_hides_all_cancelled(device_reservations_client):
+    client, session, owner = device_reservations_client
+    device = Device(name="カレンダー除外装置")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    session.add_all(
+        [
+            Reservation(
+                device_id=device.id,
+                user_id=owner.id,
+                start_time=datetime(2026, 5, 20, 10, 0, tzinfo=UTC),
+                end_time=datetime(2026, 5, 20, 11, 0, tzinfo=UTC),
+                purpose="確定のみ",
+            ),
+            Reservation(
+                device_id=device.id,
+                user_id=owner.id,
+                start_time=datetime(2026, 5, 20, 12, 0, tzinfo=UTC),
+                end_time=datetime(2026, 5, 20, 13, 0, tzinfo=UTC),
+                purpose="自分キャンセル非表示",
+                status=ReservationStatus.CANCELLED,
+            ),
+        ]
+    )
+    await session.commit()
+
+    r = await client.get(
+        f"/api/devices/{device.id}/reservations",
+        params={
+            "from": "2026-05-20T00:00:00Z",
+            "to": "2026-05-21T00:00:00Z",
+            "calendar_mode": "true",
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 1
+    assert body["items"][0]["purpose"] == "確定のみ"
 
 
 @pytest.mark.asyncio

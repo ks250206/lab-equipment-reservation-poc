@@ -12,6 +12,7 @@ import {
 } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { DeviceImageSlot } from "@/components/device/DeviceImageSlot";
+import { DeviceStatusTag } from "@/components/StatusTags";
 import { DeviceReservationsSection } from "@/components/device/DeviceReservationsSection";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -134,9 +135,7 @@ export function DeviceDetailPage() {
             >
               <Star
                 className={
-                  d.is_favorite
-                    ? "h-5 w-5 fill-amber-400 text-amber-500"
-                    : "h-5 w-5 text-zinc-400"
+                  d.is_favorite ? "h-5 w-5 fill-amber-400 text-amber-500" : "h-5 w-5 text-zinc-400"
                 }
                 aria-hidden
               />
@@ -146,7 +145,9 @@ export function DeviceDetailPage() {
         </div>
         {favMut.isError ? (
           <p className="text-sm text-red-700">
-            {favMut.error instanceof Error ? favMut.error.message : "お気に入りの更新に失敗しました"}
+            {favMut.error instanceof Error
+              ? favMut.error.message
+              : "お気に入りの更新に失敗しました"}
           </p>
         ) : null}
       </div>
@@ -154,7 +155,9 @@ export function DeviceDetailPage() {
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
         <dl className="grid min-w-0 flex-1 gap-2 text-sm sm:max-w-xl md:grid-cols-3">
           <dt className="font-medium text-zinc-600">ステータス</dt>
-          <dd className="md:col-span-2">{d.status}</dd>
+          <dd className="md:col-span-2">
+            <DeviceStatusTag status={d.status} />
+          </dd>
           <dt className="font-medium text-zinc-600">カテゴリ</dt>
           <dd className="md:col-span-2">
             {d.category ? (

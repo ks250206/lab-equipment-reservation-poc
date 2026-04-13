@@ -114,6 +114,10 @@ async def list_device_reservations(
     from_: datetime | None = Query(None, alias="from"),
     to: datetime | None = Query(None),
     include_cancelled: bool = Query(False),
+    calendar_mode: bool = Query(
+        False,
+        description="カレンダー用: キャンセル済みを閲覧者・他人問わず常に除外",
+    ),
     mine_only: bool = Query(False, description="ログインユーザーの予約に限定"),
     reservation_status: ReservationStatus | None = Query(
         None, description="予約ステータスで絞り込み（指定時は include_cancelled より優先）"
@@ -123,7 +127,6 @@ async def list_device_reservations(
         ListPageSize.FIFTY, description="1 ページあたり件数（20 / 50 / 100）"
     ),
 ) -> PaginatedReservationListResponse:
-    _ = current_user
     try:
         uuid_obj = uuid.UUID(device_id)
     except ValueError:
@@ -167,6 +170,8 @@ async def list_device_reservations(
         status_filter=reservation_status,
         page=page,
         page_size=int(page_size),
+        viewer_user_id=current_user.id,
+        hide_all_cancelled=calendar_mode,
     )
     return PaginatedReservationListResponse(
         items=[reservation_to_response(r) for r in items],
