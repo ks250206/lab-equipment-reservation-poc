@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { fetchDevices, fetchFacets } from "@/api/client";
+import type { PageSize } from "@/api/types";
+import { ListPaginationBar } from "@/components/ListPaginationBar";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export function DevicesPage() {
@@ -11,8 +13,18 @@ export function DevicesPage() {
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(50);
 
   const debouncedQuery = useDebouncedValue(rawQuery, composition);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, category, location, status]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const facetQuery = useQuery({
     queryKey: ["device-facets", debouncedQuery],
@@ -20,15 +32,23 @@ export function DevicesPage() {
   });
 
   const deviceQuery = useQuery({
-    queryKey: ["devices", debouncedQuery, category, location, status],
+    queryKey: ["devices", debouncedQuery, category, location, status, page, pageSize],
     queryFn: () =>
       fetchDevices({
         q: debouncedQuery || undefined,
         category: category || undefined,
         location: location || undefined,
         status: status || undefined,
+        page,
+        page_size: pageSize,
       }),
   });
+
+  useEffect(() => {
+    if (!deviceQuery.isSuccess || !deviceQuery.data) return;
+    const totalPages = Math.max(1, Math.ceil(deviceQuery.data.total / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [deviceQuery.isSuccess, deviceQuery.data, page, pageSize]);
 
   const categoryOptions = useMemo(
     () => facetQuery.data?.category ?? [],
@@ -118,27 +138,38 @@ export function DevicesPage() {
           装置一覧を取得できませんでした。バックエンドとプロキシ設定を確認してください。
         </p>
       ) : (
-        <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white shadow-sm">
-          {deviceQuery.data?.length === 0 ? (
-            <li className="p-4 text-sm text-zinc-600">該当する装置がありません。</li>
-          ) : (
-            deviceQuery.data?.map((d) => (
-              <li key={d.id} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
-                <div>
-                  <Link
-                    to={`/devices/${d.id}`}
-                    className="font-medium text-blue-800 hover:underline"
-                  >
-                    {d.name}
-                  </Link>
-                  <p className="text-xs text-zinc-500">
-                    {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
-                  </p>
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
+        <div className="space-y-3">
+          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white shadow-sm">
+            {deviceQuery.data?.total === 0 ? (
+              <li className="p-4 text-sm text-zinc-600">該当する装置がありません。</li>
+            ) : (
+              deviceQuery.data?.items.map((d) => (
+                <li key={d.id} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
+                  <div>
+                    <Link
+                      to={`/devices/${d.id}`}
+                      className="font-medium text-blue-800 hover:underline"
+                    >
+                      {d.name}
+                    </Link>
+                    <p className="text-xs text-zinc-500">
+                      {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
+                    </p>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+          {deviceQuery.isSuccess && deviceQuery.data ? (
+            <ListPaginationBar
+              total={deviceQuery.data.total}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          ) : null}
+        </div>
       )}
     </div>
   );

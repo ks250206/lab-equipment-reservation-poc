@@ -2,7 +2,7 @@
 
 このドキュメントは、**ブラウザで動く React アプリ**が Keycloak でログインできるようにするための、管理コンソールでの作業を順に説明します。表示ラベルは Keycloak のバージョンで多少異なる場合がありますが、**設定すべき項目の意味**は共通です。
 
-**自動設定**: 開発環境では `just seed-dev`（`ENVIRONMENT=development`）が Keycloak 管理 API に接続できた場合、本書と同等の **`device-reservation` 公開クライアント**を冪等で作成・更新します。Keycloak が未起動ならスキップされ、この手順書どおりの手動設定が必要です。
+**自動設定**: 開発環境では `just seed-dev`（`ENVIRONMENT=development`）が **Keycloak 起動済み**であることを前提に、(1) ダミー利用者 8 名（`seed-yamada` 等）を Admin API で冪等作成しアプリ DB の `users.keycloak_id` に同期、(2) 本書と同等の **`device-reservation` 公開クライアント**を冪等で作成・更新、(3) レルムロール `app-admin` の付与、を行います。Keycloak に接続できず (1) ができないときは **シード全体が失敗**します。(2)(3) だけ Admin エラー等でスキップされる場合はメッセージのみで終了コード 0 のままです。
 
 ## なぜこの作業が必要か
 

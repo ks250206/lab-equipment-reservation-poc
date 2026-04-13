@@ -1,5 +1,7 @@
-# Implementation (Iteration 3 — Device CRUD)
+# 実装内容（イテレーション 3 — 装置 CRUD）
 
-- **Device** ORM entity and Pydantic request/response models.
-- **Device service** layer (`create`, `get`, `list`, `update`, `delete`) and **FastAPI router** under `/api/devices` with admin protection for mutating routes.
-- **pytest** coverage for device flows (no mocks; real async DB session per tests).
+## スコープ
+
+- **装置** の ORM エンティティと Pydantic のリクエスト／レスポンスモデル。
+- **装置サービス**（`create`、`get`、`list`、`update`、`delete`）と **`/api/devices`** 配下の FastAPI ルータ。変更系ルートは管理者保護。
+- 装置フロー向け **pytest**（モックなし。テストごとに実 async DB セッション）。

@@ -2,38 +2,44 @@
 
 `steering/iterations/it-NN-<slug>/` を新規作成し、以下をそれぞれ **別ファイル** として保存する。`NN`・`<slug>` を置換する。
 
+**言語**: 3 ファイルとも **日本語**で書く（コード識別子・パス・コミットハッシュなどは原文のままでよい）。
+
 ---
 
-## `implementation.md`（英語）
+## `implementation.md`（日本語）
 
 ```markdown
-# Implementation (Iteration NN — <Short English Title>)
+# 実装内容（イテレーション NN — 短い日本語タイトル）
 
-## Scope
+## スコープ
 
-- (What this iteration delivers.)
+- （このイテレーションで入れた実装・到達点の箇条書き）
 
-## Non-goals
+## 非目標
 
-- (What is explicitly out of scope.)
+- （あえてやらないこと）
+
+## 補足（任意）
+
+- （設計判断・既知の制約・`doc/` との対応など）
 ```
 
 ---
 
-## `todo.md`（日本語可）
+## `todo.md`（日本語）
 
 ```markdown
-# TODO — it-NN-<slug>
+# 作業TODO — it-NN-<slug>
 
 - [ ] （最初のタスク）
 ```
 
 ---
 
-## `work_report.md`（日本語可）
+## `work_report.md`（日本語）
 
 ```markdown
-# Work report — it-NN-<slug>
+# 作業レポート — it-NN-<slug>
 
-- （着手日） steering 作成・着手
+- （日付） steering 作成・着手
 ```

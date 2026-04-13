@@ -56,6 +56,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("KEYCLOAK_SEED_ADMIN_PASSWORD"),
         repr=False,
     )
+    # 開発シードが Keycloak に作成するダミー利用者のパスワード（全員同一。PoC 用）
+    keycloak_seed_user_password: str = Field(
+        default="SeedUsersDev1!",
+        validation_alias=AliasChoices("KEYCLOAK_SEED_USER_PASSWORD"),
+        repr=False,
+    )
     app_host: str = "0.0.0.0"
     app_port: int = 8000
 

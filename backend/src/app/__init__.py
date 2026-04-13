@@ -12,8 +12,8 @@ from .schemas import (
     ReservationResponse,
     ReservationUpdate,
     UserCreate,
+    UserMeResponse,
     UserResponse,
-    UserUpdate,
 )
 
 __all__ = [
@@ -27,8 +27,8 @@ __all__ = [
     "DeviceUpdate",
     "DeviceResponse",
     "UserCreate",
-    "UserUpdate",
     "UserResponse",
+    "UserMeResponse",
     "ReservationCreate",
     "ReservationUpdate",
     "ReservationResponse",

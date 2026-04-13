@@ -19,9 +19,9 @@
 
 | ファイル | 言語 | 内容 |
 |----------|------|------|
-| `implementation.md` | **英語** | そのイテレーションで **実際に入れた実装・到達点**（スコープの要約、主要 PR / コミットの説明）。 |
-| `todo.md` | 日本語で可 | チェックリスト。**完了したら `[x]` に更新**する。 |
-| `work_report.md` | 日本語で可 | 作業セッションのメモ（判断・詰まり・次アクション）。長文不要。 |
+| `implementation.md` | **日本語** | そのイテレーションで **実際に入れた実装・到達点**（スコープ・非目標の要約、主要コミットの説明など）。 |
+| `todo.md` | **日本語** | チェックリスト。**完了したら `[x]` に更新**する。 |
+| `work_report.md` | **日本語** | 作業セッションのメモ（判断・詰まり・次アクション）。長文不要。 |
 
 既存フォルダのコピーではなく **新規ディレクトリ**として `iterations/it-NN-<slug>/` を作り、上記 3 ファイルを置く（中身は着手後に追記でよいが、**フォルダと 3 ファイルの存在は着手前必須**）。
 
@@ -39,5 +39,10 @@
 | 8 | `iterations/it-08-just-runner/` | タスクランナー（just） |
 | 9 | `iterations/it-09-persistence-seed/` | 永続化プロファイル・開発シード |
 | 10 | `iterations/it-10-keycloak-rbac-roles/` | Keycloak ロールベース認可（管理者の正） |
+| 11 | `iterations/it-11-users-db-slim/` | users テーブル縮小と Keycloak 正の明文化 |
+| 12 | `iterations/it-12-frontend-user-page/` | フロント User ページ・ヘッダー認証 UI |
+| 13 | `iterations/it-13-device-reservations-views/` | 装置ページの予約一覧（リスト / 月・週・日カレンダー） |
+| 14 | `iterations/it-14-list-pagination/` | 装置一覧・装置予約リストのページネーション（シード予約拡充） |
+| 15 | `iterations/it-15-reservation-user-profile-seed/` | 予約リストのユーザー表示（DB プロフィール）とシード日付の 2 か月分散 |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。

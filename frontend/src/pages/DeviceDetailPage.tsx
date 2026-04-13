@@ -4,6 +4,7 @@ import { ja } from "date-fns/locale";
 import { Link, useParams } from "react-router-dom";
 
 import { fetchDevice } from "@/api/client";
+import { DeviceReservationsSection } from "@/components/device/DeviceReservationsSection";
 
 export function DeviceDetailPage() {
   const { deviceId } = useParams<{ deviceId: string }>();
@@ -55,13 +56,7 @@ export function DeviceDetailPage() {
         <dt className="font-medium text-zinc-600">更新</dt>
         <dd className="md:col-span-2">{format(new Date(d.updated_at), "PPpp", { locale: ja })}</dd>
       </dl>
-      <p className="text-sm text-zinc-600">
-        予約は{" "}
-        <Link to="/reservations" className="text-blue-800 underline">
-          予約一覧
-        </Link>{" "}
-        から行ってください（ログインが必要です）。
-      </p>
+      <DeviceReservationsSection deviceId={deviceId} />
     </div>
   );
 }

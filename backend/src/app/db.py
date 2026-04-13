@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -40,3 +41,8 @@ async def init_db(bind: AsyncEngine | None = None) -> None:
     target = bind or engine
     async with target.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        for stmt in (
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255)",
+        ):
+            await conn.execute(text(stmt))

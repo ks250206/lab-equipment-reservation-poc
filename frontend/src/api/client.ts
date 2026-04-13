@@ -1,8 +1,14 @@
 import { env } from "../env";
 
-import type { Device, FacetsResponse, Reservation, UserSelf } from "./types";
-
-export type UserUpdateBody = { name?: string | null };
+import type {
+  Device,
+  FacetsResponse,
+  PageSize,
+  Paginated,
+  Reservation,
+  UserDirectoryRow,
+  UserMe,
+} from "./types";
 
 function buildUrl(path: string, params?: Record<string, string | undefined>): string {
   const base = path.startsWith("http") ? path : `${env.apiBase}${path}`;
@@ -27,9 +33,19 @@ export async function fetchDevices(filters: {
   category?: string;
   location?: string;
   status?: string;
-}): Promise<Device[]> {
-  const res = await fetch(buildUrl("/devices", filters));
-  return parseJson<Device[]>(res);
+  page?: number;
+  page_size?: PageSize;
+}): Promise<Paginated<Device>> {
+  const params: Record<string, string | undefined> = {
+    q: filters.q,
+    category: filters.category,
+    location: filters.location,
+    status: filters.status,
+    page: filters.page !== undefined ? String(filters.page) : undefined,
+    page_size: filters.page_size !== undefined ? String(filters.page_size) : undefined,
+  };
+  const res = await fetch(buildUrl("/devices", params));
+  return parseJson<Paginated<Device>>(res);
 }
 
 export async function fetchDevice(deviceId: string): Promise<Device> {
@@ -42,34 +58,18 @@ export async function fetchFacets(params: { q?: string }): Promise<FacetsRespons
   return parseJson<FacetsResponse>(res);
 }
 
-export async function fetchCurrentUser(token: string): Promise<UserSelf> {
+export async function fetchCurrentUser(token: string): Promise<UserMe> {
   const res = await fetch(buildUrl("/users/me"), {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return parseJson<UserSelf>(res);
+  return parseJson<UserMe>(res);
 }
 
-export async function fetchUsersAdmin(token: string): Promise<UserSelf[]> {
+export async function fetchUsersAdmin(token: string): Promise<UserDirectoryRow[]> {
   const res = await fetch(buildUrl("/users"), {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return parseJson<UserSelf[]>(res);
-}
-
-export async function updateUserAdmin(
-  token: string,
-  userId: string,
-  body: UserUpdateBody,
-): Promise<UserSelf> {
-  const res = await fetch(buildUrl(`/users/${userId}`), {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  return parseJson<UserSelf>(res);
+  return parseJson<UserDirectoryRow[]>(res);
 }
 
 export async function fetchReservations(token: string): Promise<Reservation[]> {
@@ -77,6 +77,57 @@ export async function fetchReservations(token: string): Promise<Reservation[]> {
     headers: { Authorization: `Bearer ${token}` },
   });
   return parseJson<Reservation[]>(res);
+}
+
+export async function fetchDeviceReservations(
+  token: string,
+  deviceId: string,
+  opts: {
+    from: string;
+    to: string;
+    includeCancelled?: boolean;
+    page?: number;
+    page_size?: PageSize;
+  },
+): Promise<Paginated<Reservation>> {
+  const res = await fetch(
+    buildUrl(`/devices/${deviceId}/reservations`, {
+      from: opts.from,
+      to: opts.to,
+      ...(opts.includeCancelled ? { include_cancelled: "true" } : {}),
+      ...(opts.page !== undefined ? { page: String(opts.page) } : {}),
+      ...(opts.page_size !== undefined ? { page_size: String(opts.page_size) } : {}),
+    }),
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  return parseJson<Paginated<Reservation>>(res);
+}
+
+/** カレンダー用に窓内の全予約をページングで結合取得する（API の page_size 上限に合わせて複数回取得） */
+export async function fetchDeviceReservationsAllInRange(
+  token: string,
+  deviceId: string,
+  opts: { from: string; to: string; includeCancelled?: boolean },
+): Promise<Reservation[]> {
+  const pageSize: PageSize = 100;
+  const merged: Reservation[] = [];
+  let page = 1;
+  for (;;) {
+    const res = await fetchDeviceReservations(token, deviceId, {
+      ...opts,
+      page,
+      page_size: pageSize,
+    });
+    merged.push(...res.items);
+    if (merged.length >= res.total || res.items.length === 0) {
+      break;
+    }
+    page += 1;
+    if (page > 500) {
+      break;
+    }
+  }
+  return merged;
 }
 
 export async function createReservation(

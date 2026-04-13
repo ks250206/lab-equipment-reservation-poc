@@ -13,7 +13,7 @@ personal_space/
 ├── doc/                   # 恒久的設計ドキュメント（@doc/ で参照）
 ├── flake.nix
 ├── Justfile               # just: 依存起動・dev サーバ・品質チェック
-├── scripts/               # compose.sh（永続プロファイル含む）
+├── scripts/               # compose.sh、postgres_interactive.sh（Podman 向け psql 等）
 ├── docker/                # Postgres init（keycloak DB 等）
 ├── .env                   # gitignore（ローカル秘密）
 ├── .env.example
@@ -49,7 +49,7 @@ steering/
 │   └── iteration-starter.md  # 新イテレーション用 3 ファイルのコピー用テンプレ
 └── iterations/
     └── it-NN-<slug>/         # 例: it-06-frontend
-        ├── implementation.md # 実装内容（英語で記載する）
+        ├── implementation.md # 実装内容（日本語で記載する）
         ├── todo.md           # チェックリスト
         └── work_report.md    # 作業報告・判断ログ
 ```

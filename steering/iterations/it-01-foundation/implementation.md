@@ -1,8 +1,10 @@
-# Implementation (Iteration 1 — Foundation)
+# 実装内容（イテレーション 1 — 基盤）
 
-- Nix `flake.nix` for a reproducible dev shell.
-- Compose (or Podman-compatible) stack for **PostgreSQL** and **Keycloak** on local ports.
-- **FastAPI** backend skeleton (`backend/`, `uv`, `pyproject.toml`) with app entrypoint and configuration stubs.
-- **React + Vite** frontend skeleton (`frontend/`, `pnpm`) with baseline tooling (TypeScript, Tailwind pipeline).
+## スコープ
 
-Design SSOT lives under `doc/`; this iteration only established runnable project boundaries.
+- 再現可能な開発シェル用の Nix `flake.nix`。
+- ローカルポートで **PostgreSQL** と **Keycloak** を起動する Compose（Podman 互換を含む）スタック。
+- **FastAPI** バックエンドの骨格（`backend/`、`uv`、`pyproject.toml`）、アプリエントリポイントと設定のスタブ。
+- **React + Vite** フロントの骨格（`frontend/`、`pnpm`）、TypeScript・Tailwind 系のベースライン。
+
+設計の SSOT は `doc/` に置き、本イテレーションは実行可能なプロジェクト境界の確立にとどめた。

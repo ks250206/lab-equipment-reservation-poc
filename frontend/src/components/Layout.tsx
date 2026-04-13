@@ -1,3 +1,4 @@
+import { User } from "lucide-react";
 import { Link, Outlet } from "react-router-dom";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -17,7 +18,9 @@ export function Layout() {
           <strong className="font-semibold">認証の初期化に失敗しました。</strong>
           <span className="ml-1 font-mono text-xs opacity-90">{initError}</span>
           <span className="ml-2 block text-amber-900/90 sm:inline sm:ml-2">
-            Keycloak が起動しているか、`frontend/.env` の VITE_KEYCLOAK_* が管理コンソールの設定と一致するか確認してください（ブラウザの開発者ツール → コンソールにも詳細が出ます）。
+            Keycloak が起動しているか、`frontend/.env` の VITE_KEYCLOAK_*
+            が管理コンソールの設定と一致するか確認してください（ブラウザの開発者ツール →
+            コンソールにも詳細が出ます）。
           </span>
         </div>
       ) : null}
@@ -38,21 +41,35 @@ export function Layout() {
             </Link>
           ) : null}
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {!ready ? (
             <span className="text-sm text-zinc-500">認証を確認しています…</span>
           ) : authenticated ? (
-            <button
-              type="button"
-              className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm hover:bg-zinc-50"
-              onClick={logout}
-            >
-              ログアウト
-            </button>
+            <>
+              <Link
+                to="/user"
+                className="inline-flex max-w-[14rem] items-center gap-1.5 truncate rounded-md px-2 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
+                title="マイページ"
+              >
+                <User className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+                <span className="truncate">
+                  {meQuery.isLoading
+                    ? "マイページ"
+                    : meQuery.data?.name?.trim() || meQuery.data?.email || "マイページ"}
+                </span>
+              </Link>
+              <button
+                type="button"
+                className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-50"
+                onClick={logout}
+              >
+                ログアウト
+              </button>
+            </>
           ) : (
             <button
               type="button"
-              className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm hover:bg-zinc-50"
+              className="rounded bg-blue-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-800"
               onClick={login}
             >
               ログイン

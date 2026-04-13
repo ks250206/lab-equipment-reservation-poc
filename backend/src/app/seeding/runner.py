@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -12,9 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from ..config import Settings
 from ..db import async_session_factory, init_db
 from ..models import Device, Reservation, User
-from .dev_seed import DEVICE_ROWS, SEED_DEVICE_IDS, SEED_USER_IDS, SEED_USERS
+from .dev_seed import DEVICE_ROWS, SEED_DEVICE_IDS, SEED_USER_IDS, build_reservation_seed_rows
 from .keycloak_seed import (
     ensure_keycloak_app_admin_realm_role,
+    ensure_keycloak_dev_seed_users,
     ensure_keycloak_device_reservation_client,
 )
 
@@ -29,6 +31,7 @@ def ensure_development_for_seed() -> None:
 
 async def run_seed(
     *,
+    user_rows: list[dict[str, object]],
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> None:
     ensure_development_for_seed()
@@ -52,17 +55,18 @@ async def run_seed(
                     )
                 )
             )
-            for row in SEED_USERS:
-                ins = pg_insert(User).values(**row)
-                ins = ins.on_conflict_do_update(
-                    index_elements=[User.keycloak_id],
+            await session.execute(delete(User).where(User.id.in_(SEED_USER_IDS)))
+            for row in user_rows:
+                ins_u = pg_insert(User).values(**row)
+                ins_u = ins_u.on_conflict_do_update(
+                    index_elements=[User.id],
                     set_={
-                        "email": ins.excluded.email,
-                        "name": ins.excluded.name,
-                        "role": ins.excluded.role,
+                        "keycloak_id": ins_u.excluded.keycloak_id,
+                        "email": ins_u.excluded.email,
+                        "name": ins_u.excluded.name,
                     },
                 )
-                await session.execute(ins)
+                await session.execute(ins_u)
             for row in DEVICE_ROWS:
                 ins = pg_insert(Device).values(**row)
                 ins = ins.on_conflict_do_update(
@@ -76,14 +80,21 @@ async def run_seed(
                     },
                 )
                 await session.execute(ins)
+            res_rows = build_reservation_seed_rows(at=datetime.now(UTC))
+            for i in range(0, len(res_rows), 400):
+                chunk = res_rows[i : i + 400]
+                session.add_all([Reservation(**row) for row in chunk])
 
 
 async def _run_seed_and_keycloak() -> str:
-    await run_seed()
     cfg = Settings()
+    user_rows, user_msg = await ensure_keycloak_dev_seed_users(cfg)
+    if not user_rows:
+        raise RuntimeError(user_msg)
+    await run_seed(user_rows=user_rows)
     line1 = await ensure_keycloak_device_reservation_client(cfg)
     line2 = await ensure_keycloak_app_admin_realm_role(cfg)
-    return f"{line1}\n{line2}"
+    return f"{user_msg}\n{line1}\n{line2}"
 
 
 def main() -> None:
@@ -92,5 +103,5 @@ def main() -> None:
     except RuntimeError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
-    print("開発シードを反映しました（users / devices）。")
+    print("開発シードを反映しました（Keycloak ユーザー → users / devices）。")
     print(kc_line)

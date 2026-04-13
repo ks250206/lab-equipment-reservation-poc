@@ -16,7 +16,7 @@
 2. `just setup` … `.env` / `frontend/.env` の雛形、`uv sync`、`pnpm install`
 3. `.env` と `frontend/.env` を必要なら編集（[.env.example](../.env.example)、[frontend/.env.example](../frontend/.env.example)）
 4. `just deps-up` … Postgres + Keycloak（開発プロファイル）
-5. `just seed-dev` … `ENVIRONMENT=development` のときのみ。DB に装置・ダミーユーザ、Keycloak が起動していれば `device-reservation` クライアントを Admin API で冪等更新（[keycloak-setup.md](keycloak-setup.md) 参照）
+5. `just seed-dev` … `ENVIRONMENT=development` のときのみ。**Keycloak が起動していることが必須**（先に Admin API でダミー利用者 8 名を作成し、その id を `users.keycloak_id` に同期してから DB に装置を投入）。続けて `device-reservation` クライアントと `app-admin` ロールを冪等更新（[keycloak-setup.md](keycloak-setup.md) 参照）
 6. 別ターミナルで `just backend-dev` と `just frontend-dev`
 
 ブラウザ: **http://localhost:5173** 。API ドキュメント: **http://localhost:8000/docs**。
@@ -33,7 +33,17 @@ just backend-dev      # 別ターミナル
 just frontend-dev     # 別ターミナル
 ```
 
-シードだけやり直す: `just seed-dev`（冪等）。
+シードだけやり直す: `just seed-dev`（冪等）。**Keycloak 起動済み**でないとユーザー同期で失敗する。
+
+### users スキーマ変更後の DB やり直し（破壊的）
+
+`users` テーブルの列構成を変えたイテレーション以降、**既存の Postgres ボリューム上のテーブルは `CREATE TABLE` 時のまま残る**（SQLAlchemy の `create_all` は列削除を行わない）。ローカルで新スキーマに合わせるには次のいずれかを行う。
+
+1. **推奨**: `just deps-down` のあと、アプリ用 Postgres の名前付きボリュームを削除する（`docker volume ls` / `podman volume ls` で `postgres_data` 等を確認し、`docker volume rm <name>` または `podman volume rm <name>`）。
+2. `just deps-up` で Postgres を起動し直す（init スクリプトが初回のみ走る点に注意）。
+3. `just seed-dev` で Keycloak ダミー利用者 → `users` → 装置を再投入。
+
+データを残したまま列だけ落とすマイグレーションは PoC では扱わない。
 
 ## `just` 早見表
 
@@ -43,7 +53,9 @@ just frontend-dev     # 別ターミナル
 |------|----------|
 | 初回準備 | `just setup` |
 | 依存起動 / 停止（開発） | `just deps-up` / `just deps-down` |
+| Postgres 対話確認（開発） | `just deps-psql`（`psql` 直起動） / `just deps-postgres-shell`（bash でコンテナに入る）。Podman 時は `podman-compose exec` が `-it` 非対応のため [scripts/postgres_interactive.sh](../scripts/postgres_interactive.sh) が `podman exec -it device-reservation-postgres …` に切り替える。 |
 | 本番相当の依存起動 / 停止 | `just deps-up-prod` / `just deps-down-prod` |
+| Postgres 対話確認（本番相当スタック） | `just deps-psql-prod` / `just deps-postgres-shell-prod` |
 | ログ | `just deps-logs` / `just deps-logs-prod`（`-f` 等は compose にそのまま渡す） |
 | API / フロント開発 | `just backend-dev` / `just frontend-dev` |
 | 開発シード | `just seed-dev` |

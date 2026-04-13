@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
 
 
 class DeviceBase(BaseModel):
@@ -32,32 +32,35 @@ class DeviceResponse(DeviceBase):
     updated_at: datetime
 
 
-class UserBase(BaseModel):
-    email: EmailStr
-    name: str | None = None
+class PaginatedDeviceListResponse(BaseModel):
+    items: list[DeviceResponse]
+    total: int
+    page: int
+    page_size: int
 
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    """テスト等用。HTTP では未使用。"""
+
     keycloak_id: str
-    role: str = "user"
 
 
-class UserUpdate(BaseModel):
-    """管理者による更新。ロールは Keycloak 側のため name のみ。"""
-
-    name: str | None = None
-
-
-class UserResponse(UserBase):
-    """読み取り専用。DB 上の不正なメールでも 500 にしないため email は str に緩和する。"""
+class UserResponse(BaseModel):
+    """管理者向け一覧・詳細。アプリ DB に保持している列のみ。"""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    email: str
     keycloak_id: str
-    role: str
     created_at: datetime
+
+
+class UserMeResponse(UserResponse):
+    """ログイン中ユーザー。email / name / role は JWT 由来（role は管理者ロールの有無）。"""
+
+    email: str
+    name: str | None = None
+    role: str
 
 
 class ReservationCreate(BaseModel):
@@ -87,3 +90,12 @@ class ReservationResponse(BaseModel):
     purpose: str | None = None
     status: str
     created_at: datetime
+    user_name: str | None = None
+    user_email: str | None = None
+
+
+class PaginatedReservationListResponse(BaseModel):
+    items: list[ReservationResponse]
+    total: int
+    page: int
+    page_size: int

@@ -1,12 +1,12 @@
-# Implementation (Iteration 8 — Just task runner)
+# 実装内容（イテレーション 8 — Just タスクランナー）
 
-## Scope
+## スコープ
 
-- Root **Justfile** with grouped recipes: dependency stack (`deps-up` / `deps-down` / `deps-ps` / `deps-logs`), first-time **setup** (env file stubs, `uv sync`, `pnpm install`), **dev** servers (`backend-dev`, `frontend-dev`), and **check** chains aligned with `doc/development-guidelines.md`.
-- **Nix**: `just` was already in the devShell; added **`podman-compose`** so Podman workflows match README without extra installs.
-- **Runtime selection**: `scripts/compose.sh` + `DEV_CONTAINER_RUNTIME` (**`podman` default**, `docker` uses `docker-compose` first, then `docker compose`) so macOS hosts without a working Compose v2 plugin still work when opting into Docker.
+- ルート **Justfile** にグループ化したレシピ: 依存スタック（`deps-up` / `deps-down` / `deps-ps` / `deps-logs`）、初回 **setup**（環境ファイルスタブ、`uv sync`、`pnpm install`）、**dev** サーバ（`backend-dev`、`frontend-dev`）、`doc/development-guidelines.md` に沿った **check** チェーン。
+- **Nix**: devShell に `just` は既存。Podman 手順を README どおりにするため **`podman-compose`** を追加。
+- **ランタイム選択**: `scripts/compose.sh` と `DEV_CONTAINER_RUNTIME`（既定 **`podman`**。`docker` は `docker-compose` を優先し、なければ `docker compose`）により、Compose v2 プラグインが無い macOS でも Docker 利用時に動かしやすくした。
 
-## Non-goals
+## 非目標
 
-- No Docker/Podman daemon management from Nix (still host-provided).
-- No single-process “run everything” recipe (two terminals for API + Vite remain the supported model).
+- Nix から Docker／Podman デーモンを管理しない（ホスト提供のまま）。
+- 単一プロセスで「全部起動」するレシピは作らない（API + Vite は二ターミナル運用を推奨モデルとする）。

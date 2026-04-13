@@ -92,10 +92,10 @@ pnpm run test
 
 1. **[AGENTS.md](../AGENTS.md)** の「イテレーション一覧」に行を追加する（コミット目安 `itN-...`、ステータスは **未着手** または **進行中** からでよい）。
 2. **`steering/iterations/it-NN-<slug>/` ディレクトリを新規作成**する。`NN` は 2 桁ゼロ埋め、`<slug>` は短い **kebab-case の英語**（例: `persistence-seed`）。既存イテレーションと重複しない名前にする。
-3. **次の 3 ファイルを必ず置く**（空の見出しだけでもよい。中身の言語・役割は [steering/README.md](../steering/README.md) に従う）:
-   - `implementation.md`（英語）
-   - `todo.md`（日本語可）
-   - `work_report.md`（日本語可）
+3. **次の 3 ファイルを必ず置く**（空の見出しだけでもよい。本文は **いずれも日本語** とし、役割の詳細は [steering/README.md](../steering/README.md) に従う）:
+   - `implementation.md`（実装内容・スコープの要約）
+   - `todo.md`（チェックリスト）
+   - `work_report.md`（作業メモ）
 4. コピー用の見出し例は [steering/planning/iteration-starter.md](../steering/planning/iteration-starter.md) を参照する。
 5. **[steering/README.md](../steering/README.md)** の「インデックス（フォルダ名）」表に当該イテレーションの行を追加する。
 

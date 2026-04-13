@@ -10,6 +10,7 @@ from .facet_search import (
     get_all_locations,
     get_facets,
     search_devices,
+    search_devices_paginated,
 )
 from .reservations import (
     check_time_overlap,
@@ -18,13 +19,14 @@ from .reservations import (
     get_reservation,
     get_reservations_by_device,
     get_reservations_by_user,
+    list_reservations_for_device_in_window,
+    list_reservations_for_device_in_window_paginated,
     update_reservation,
 )
 from .users import (
     create_user,
     get_user,
     get_users,
-    update_user,
 )
 
 __all__ = [
@@ -36,15 +38,17 @@ __all__ = [
     "create_user",
     "get_user",
     "get_users",
-    "update_user",
     "create_reservation",
     "get_reservation",
     "get_reservations_by_user",
     "get_reservations_by_device",
+    "list_reservations_for_device_in_window",
+    "list_reservations_for_device_in_window_paginated",
     "update_reservation",
     "delete_reservation",
     "check_time_overlap",
     "search_devices",
+    "search_devices_paginated",
     "get_facets",
     "get_all_categories",
     "get_all_locations",

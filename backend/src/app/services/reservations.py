@@ -1,9 +1,11 @@
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ..config import ReservationStatus
 from ..datetime_util import ensure_utc
@@ -52,6 +54,82 @@ async def get_reservations_by_device(
 ) -> Sequence[Reservation]:
     result = await session.execute(select(Reservation).where(Reservation.device_id == device_id))
     return result.scalars().all()
+
+
+def _reservation_device_window_where(
+    device_id: uuid.UUID,
+    window_start: datetime,
+    window_end: datetime,
+    *,
+    include_cancelled: bool,
+) -> tuple[Any, datetime, datetime]:
+    """窓と重なる予約行の WHERE 句（`window_start` < `window_end` を前提）。"""
+    ws = ensure_utc(window_start)
+    we = ensure_utc(window_end)
+    conds: list[Any] = [
+        Reservation.device_id == device_id,
+        Reservation.end_time > ws,
+        Reservation.start_time < we,
+    ]
+    if not include_cancelled:
+        conds.append(Reservation.status != ReservationStatus.CANCELLED)
+    return and_(*conds), ws, we
+
+
+async def list_reservations_for_device_in_window(
+    session: AsyncSession,
+    device_id: uuid.UUID,
+    *,
+    window_start: datetime,
+    window_end: datetime,
+    include_cancelled: bool = False,
+) -> Sequence[Reservation]:
+    """装置の予約を時刻窓で取得（窓と重なる行）。`window_start` < `window_end` を前提とする。"""
+    where_expr, _ws, _we = _reservation_device_window_where(
+        device_id,
+        window_start,
+        window_end,
+        include_cancelled=include_cancelled,
+    )
+    q = (
+        select(Reservation)
+        .where(where_expr)
+        .options(selectinload(Reservation.user))
+        .order_by(Reservation.start_time.asc())
+    )
+    result = await session.execute(q)
+    return result.scalars().all()
+
+
+async def list_reservations_for_device_in_window_paginated(
+    session: AsyncSession,
+    device_id: uuid.UUID,
+    *,
+    window_start: datetime,
+    window_end: datetime,
+    include_cancelled: bool = False,
+    page: int,
+    page_size: int,
+) -> tuple[list[Reservation], int]:
+    where_expr, _ws, _we = _reservation_device_window_where(
+        device_id,
+        window_start,
+        window_end,
+        include_cancelled=include_cancelled,
+    )
+    count_stmt = select(func.count()).select_from(Reservation).where(where_expr)
+    total = int(await session.scalar(count_stmt) or 0)
+    offset = (page - 1) * page_size
+    list_stmt = (
+        select(Reservation)
+        .where(where_expr)
+        .options(selectinload(Reservation.user))
+        .order_by(Reservation.start_time.asc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    result = await session.execute(list_stmt)
+    return list(result.scalars().all()), total
 
 
 async def update_reservation(

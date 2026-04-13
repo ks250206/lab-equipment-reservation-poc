@@ -6,6 +6,7 @@ import { DeviceDetailPage } from "@/pages/DeviceDetailPage";
 import { DevicesPage } from "@/pages/DevicesPage";
 import { HomePage } from "@/pages/HomePage";
 import { ReservationsPage } from "@/pages/ReservationsPage";
+import { UserPage } from "@/pages/UserPage";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="devices" element={<DevicesPage />} />
         <Route path="devices/:deviceId" element={<DeviceDetailPage />} />
         <Route path="reservations" element={<ReservationsPage />} />
+        <Route path="user" element={<UserPage />} />
         <Route path="admin/users" element={<AdminUsersPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

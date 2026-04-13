@@ -30,7 +30,7 @@ async def engine():
 async def reservation_client(engine):
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as shared:
-        owner = User(keycloak_id="reservation-api-owner", email="owner@test.com")
+        owner = User(keycloak_id="reservation-api-owner")
         shared.add(owner)
         await shared.flush()
         await shared.refresh(owner)
@@ -111,7 +111,7 @@ async def test_put_reservation_overlap_returns_409(reservation_client):
     client, session, owner = reservation_client
     device = Device(name="更新重複装置")
     session.add(device)
-    other = User(keycloak_id="other-user", email="other@test.com")
+    other = User(keycloak_id="other-user")
     session.add(other)
     await session.commit()
     await session.refresh(device)
@@ -151,7 +151,7 @@ async def test_put_reservation_cancelled_skips_overlap(reservation_client):
     client, session, owner = reservation_client
     device = Device(name="キャンセル装置")
     session.add(device)
-    other = User(keycloak_id="other-user-2", email="other2@test.com")
+    other = User(keycloak_id="other-user-2")
     session.add(other)
     await session.commit()
     await session.refresh(device)
@@ -192,7 +192,7 @@ async def test_list_reservations_only_own(reservation_client):
     client, session, owner = reservation_client
     device = Device(name="一覧装置")
     session.add(device)
-    other = User(keycloak_id="lister-other", email="lister@test.com")
+    other = User(keycloak_id="lister-other")
     session.add(other)
     await session.flush()
     await session.refresh(device)

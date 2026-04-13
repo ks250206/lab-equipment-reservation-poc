@@ -1,0 +1,329 @@
+import type { DatesSetArg } from "@fullcalendar/core";
+import jaLocale from "@fullcalendar/core/locales/ja.js";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import FullCalendar from "@fullcalendar/react";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import { useQuery } from "@tanstack/react-query";
+import { addMonths, format, startOfMonth } from "date-fns";
+import { ja } from "date-fns/locale";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+
+import { fetchDeviceReservations, fetchDeviceReservationsAllInRange } from "@/api/client";
+import type { PageSize } from "@/api/types";
+import { useAuth } from "@/auth/AuthContext";
+import { ListPaginationBar } from "@/components/ListPaginationBar";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { reservationsToFullCalendarEvents } from "@/lib/deviceReservationCalendar";
+
+type ViewMode = "list" | "month" | "week" | "day";
+
+function initialCalendarMonthRange() {
+  const n = new Date();
+  return { start: startOfMonth(n), end: startOfMonth(addMonths(n, 1)) };
+}
+
+export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
+  const { authenticated, ready, login, getValidToken } = useAuth();
+  const meQuery = useCurrentUser();
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [queryRange, setQueryRange] = useState(initialCalendarMonthRange);
+  const [listPage, setListPage] = useState(1);
+  const [listPageSize, setListPageSize] = useState<PageSize>(50);
+  const calendarRef = useRef<FullCalendar>(null);
+
+  const onDatesSet = useCallback((arg: DatesSetArg) => {
+    setQueryRange((prev) => {
+      if (
+        prev.start.getTime() === arg.start.getTime() &&
+        prev.end.getTime() === arg.end.getTime()
+      ) {
+        return prev;
+      }
+      return { start: arg.start, end: arg.end };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === "list") return;
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    const name =
+      viewMode === "month" ? "dayGridMonth" : viewMode === "week" ? "timeGridWeek" : "timeGridDay";
+    if (api.view.type !== name) {
+      api.changeView(name);
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [queryRange.start, queryRange.end]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [listPageSize]);
+
+  const listReservationsQuery = useQuery({
+    queryKey: [
+      "device-reservations",
+      deviceId,
+      queryRange.start.toISOString(),
+      queryRange.end.toISOString(),
+      "list",
+      listPage,
+      listPageSize,
+    ],
+    queryFn: async () => {
+      const token = await getValidToken();
+      if (!token) {
+        throw new Error("ログインが必要です");
+      }
+      return fetchDeviceReservations(token, deviceId, {
+        from: queryRange.start.toISOString(),
+        to: queryRange.end.toISOString(),
+        page: listPage,
+        page_size: listPageSize,
+      });
+    },
+    enabled: Boolean(deviceId) && authenticated && ready && viewMode === "list",
+  });
+
+  const calendarReservationsQuery = useQuery({
+    queryKey: [
+      "device-reservations",
+      deviceId,
+      queryRange.start.toISOString(),
+      queryRange.end.toISOString(),
+      "calendar",
+    ],
+    queryFn: async () => {
+      const token = await getValidToken();
+      if (!token) {
+        throw new Error("ログインが必要です");
+      }
+      return fetchDeviceReservationsAllInRange(token, deviceId, {
+        from: queryRange.start.toISOString(),
+        to: queryRange.end.toISOString(),
+      });
+    },
+    enabled: Boolean(deviceId) && authenticated && ready && viewMode !== "list",
+  });
+
+  useEffect(() => {
+    if (!listReservationsQuery.isSuccess || !listReservationsQuery.data) return;
+    const totalPages = Math.max(1, Math.ceil(listReservationsQuery.data.total / listPageSize));
+    if (listPage > totalPages) setListPage(totalPages);
+  }, [listReservationsQuery.isSuccess, listReservationsQuery.data, listPage, listPageSize]);
+
+  const calendarEvents = useMemo(
+    () => reservationsToFullCalendarEvents(calendarReservationsQuery.data ?? []),
+    [calendarReservationsQuery.data],
+  );
+
+  const myUserId = meQuery.data?.id;
+
+  const shiftListMonth = (delta: number) => {
+    setQueryRange((r) => ({
+      start: addMonths(r.start, delta),
+      end: addMonths(r.end, delta),
+    }));
+  };
+
+  if (!ready) {
+    return <p className="text-sm text-zinc-600">認証を確認しています…</p>;
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <h2 className="text-lg font-medium text-zinc-800">この装置の予約</h2>
+        <p className="text-sm text-zinc-700">
+          占有枠の一覧を表示するにはログインが必要です（他ユーザーの予約も表示されます）。
+        </p>
+        <button
+          type="button"
+          className="rounded border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50"
+          onClick={() => login()}
+        >
+          ログイン
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg font-medium text-zinc-800">この装置の予約</h2>
+        <div className="flex flex-wrap gap-1">
+          {(
+            [
+              ["list", "リスト"],
+              ["month", "月"],
+              ["week", "週"],
+              ["day", "日"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              className={
+                viewMode === mode
+                  ? "rounded border border-zinc-800 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white"
+                  : "rounded border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {viewMode === "list" && (
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <button
+            type="button"
+            className="rounded border border-zinc-300 bg-white px-3 py-1 hover:bg-zinc-50"
+            onClick={() => shiftListMonth(-1)}
+          >
+            前月
+          </button>
+          <span className="font-medium text-zinc-700">
+            {format(queryRange.start, "yyyy年 M月", { locale: ja })}
+          </span>
+          <button
+            type="button"
+            className="rounded border border-zinc-300 bg-white px-3 py-1 hover:bg-zinc-50"
+            onClick={() => shiftListMonth(1)}
+          >
+            翌月
+          </button>
+        </div>
+      )}
+
+      {viewMode === "list" && listReservationsQuery.isError && (
+        <p className="text-sm text-red-700">
+          {listReservationsQuery.error instanceof Error
+            ? listReservationsQuery.error.message
+            : "予約を読み込めませんでした。"}
+        </p>
+      )}
+
+      {viewMode !== "list" && calendarReservationsQuery.isError && (
+        <p className="text-sm text-red-700">
+          {calendarReservationsQuery.error instanceof Error
+            ? calendarReservationsQuery.error.message
+            : "予約を読み込めませんでした。"}
+        </p>
+      )}
+
+      {viewMode === "list" && listReservationsQuery.isLoading && (
+        <p className="text-sm text-zinc-600">予約を読み込み中…</p>
+      )}
+
+      {viewMode !== "list" && calendarReservationsQuery.isLoading && (
+        <p className="text-sm text-zinc-600">カレンダー用の予約を読み込み中…</p>
+      )}
+
+      {viewMode === "list" && listReservationsQuery.isSuccess && (
+        <div className="space-y-3">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200">
+            <table className="min-w-full border-collapse text-sm">
+              <thead className="bg-zinc-50 text-left text-zinc-600">
+                <tr>
+                  <th className="border-b border-zinc-200 px-3 py-2 font-medium">開始</th>
+                  <th className="border-b border-zinc-200 px-3 py-2 font-medium">終了</th>
+                  <th className="border-b border-zinc-200 px-3 py-2 font-medium">ステータス</th>
+                  <th className="border-b border-zinc-200 px-3 py-2 font-medium">目的</th>
+                  <th className="border-b border-zinc-200 px-3 py-2 font-medium">氏名</th>
+                  <th className="border-b border-zinc-200 px-3 py-2 font-medium">メール</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listReservationsQuery.data.items.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-6 text-center text-zinc-500">
+                      この期間に予約はありません。
+                    </td>
+                  </tr>
+                ) : (
+                  listReservationsQuery.data.items.map((r) => {
+                    const mine = myUserId !== undefined && r.user_id === myUserId;
+                    return (
+                      <tr key={r.id} className={mine ? "bg-amber-50/80" : undefined}>
+                        <td className="border-b border-zinc-100 px-3 py-2">
+                          {format(new Date(r.start_time), "PPp", { locale: ja })}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2">
+                          {format(new Date(r.end_time), "PPp", { locale: ja })}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2">{r.status}</td>
+                        <td className="border-b border-zinc-100 px-3 py-2">
+                          {r.purpose?.trim() ? r.purpose : "—"}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-zinc-800">
+                          {r.user_name?.trim() ? r.user_name.trim() : "—"}
+                          {mine ? (
+                            <span className="ml-2 rounded bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-sans text-amber-900">
+                              自分
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 break-all text-xs text-zinc-700">
+                          {r.user_email?.trim() ? r.user_email.trim() : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <ListPaginationBar
+            total={listReservationsQuery.data.total}
+            page={listPage}
+            pageSize={listPageSize}
+            onPageChange={setListPage}
+            onPageSizeChange={setListPageSize}
+          />
+        </div>
+      )}
+
+      {viewMode !== "list" && (
+        <div className="rounded-lg border border-zinc-200 bg-white p-2">
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            locale={jaLocale}
+            initialView={
+              viewMode === "month"
+                ? "dayGridMonth"
+                : viewMode === "week"
+                  ? "timeGridWeek"
+                  : "timeGridDay"
+            }
+            initialDate={queryRange.start}
+            headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
+            datesSet={onDatesSet}
+            events={calendarEvents}
+            height="auto"
+            editable={false}
+            selectable={false}
+            eventDisplay="block"
+            slotEventOverlap={false}
+          />
+        </div>
+      )}
+
+      <p className="text-sm text-zinc-600">
+        予約の作成・取り消しは{" "}
+        <Link to="/reservations" className="text-blue-800 underline">
+          予約一覧
+        </Link>
+        から行えます。
+      </p>
+    </div>
+  );
+}

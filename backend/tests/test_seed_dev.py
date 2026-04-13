@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -5,7 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import Settings, settings
 from app.db import Base
-from app.models import Device, User
+from app.models import Device, Reservation, User
+from app.seeding.dev_seed import (
+    DEVICE_ROWS,
+    RESERVATIONS_PER_DEVICE,
+    build_reservation_seed_rows,
+    offline_seed_user_rows,
+    uid,
+)
 from app.seeding.runner import ensure_development_for_seed, run_seed
 
 
@@ -39,13 +48,36 @@ async def test_seed_dev_idempotent(engine, monkeypatch: pytest.MonkeyPatch) -> N
     assert not Settings().is_production
 
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    await run_seed(session_factory=factory)
+    rows = offline_seed_user_rows()
+    await run_seed(session_factory=factory, user_rows=rows)
     async with factory() as session:
         n1 = await session.scalar(select(func.count()).select_from(Device))
         u1 = await session.scalar(select(func.count()).select_from(User))
-    await run_seed(session_factory=factory)
+        r1 = await session.scalar(select(func.count()).select_from(Reservation))
+    await run_seed(session_factory=factory, user_rows=rows)
     async with factory() as session:
         n2 = await session.scalar(select(func.count()).select_from(Device))
         u2 = await session.scalar(select(func.count()).select_from(User))
+        r2 = await session.scalar(select(func.count()).select_from(Reservation))
     assert n1 == n2 == 33
     assert u1 == u2 == 8
+    expected_res = len(DEVICE_ROWS) * RESERVATIONS_PER_DEVICE
+    assert r1 == r2 == expected_res
+    async with factory() as session:
+        yamada = await session.get(User, uid("yamada"))
+        assert yamada is not None
+        assert yamada.email == "yamada.taro@example.local"
+        assert yamada.name == "山田 太郎"
+
+
+def test_build_reservation_seed_rows_two_month_window() -> None:
+    at = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
+    rows = build_reservation_seed_rows(at=at)
+    assert len(rows) == len(DEVICE_ROWS) * RESERVATIONS_PER_DEVICE
+    win_start = datetime(2026, 3, 1, tzinfo=UTC)
+    win_end = datetime(2026, 5, 1, tzinfo=UTC)
+    for row in rows:
+        st = row["start_time"]
+        et = row["end_time"]
+        assert win_start <= st < win_end
+        assert st < et <= win_end

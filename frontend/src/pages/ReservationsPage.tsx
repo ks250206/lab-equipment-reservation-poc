@@ -31,13 +31,13 @@ export function ReservationsPage() {
 
   const devicesQuery = useQuery({
     queryKey: ["devices-for-reservation"],
-    queryFn: () => fetchDevices({}),
+    queryFn: () => fetchDevices({ page: 1, page_size: 100 }),
     enabled: authenticated && ready,
   });
 
   const deviceNameById = useMemo(() => {
     const m = new Map<string, string>();
-    devicesQuery.data?.forEach((d) => m.set(d.id, d.name));
+    devicesQuery.data?.items.forEach((d) => m.set(d.id, d.name));
     return m;
   }, [devicesQuery.data]);
 
@@ -129,7 +129,7 @@ export function ReservationsPage() {
               className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
             >
               <option value="">選択してください</option>
-              {devicesQuery.data?.map((d) => (
+              {devicesQuery.data?.items.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>

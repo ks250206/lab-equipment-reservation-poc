@@ -8,7 +8,7 @@ from jwt_payload_utils import jwt_like_payload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.auth import get_current_user, get_token_payload
-from app.config import UserRole, settings
+from app.config import settings
 from app.db import Base, get_session
 from app.main import app
 from app.models import Device, User
@@ -29,11 +29,7 @@ async def engine():
 async def devices_client(engine):
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as shared:
-        admin = User(
-            keycloak_id="devices-admin",
-            email="admin-devices@test.com",
-            role=UserRole.ADMIN,
-        )
+        admin = User(keycloak_id="devices-admin")
         shared.add(admin)
         await shared.flush()
         await shared.refresh(admin)
@@ -68,7 +64,7 @@ async def devices_anon_client(engine):
     """管理者以外（装置の書き込みは 403）。"""
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as shared:
-        user = User(keycloak_id="devices-user", email="user-devices@test.com", role=UserRole.USER)
+        user = User(keycloak_id="devices-user")
         shared.add(user)
         await shared.flush()
         await shared.refresh(user)
@@ -103,7 +99,8 @@ async def test_list_devices_empty(devices_client):
     client, _ = devices_client
     r = await client.get("/api/devices")
     assert r.status_code == 200
-    assert r.json() == []
+    body = r.json()
+    assert body == {"items": [], "total": 0, "page": 1, "page_size": 50}
 
 
 @pytest.mark.asyncio
@@ -119,8 +116,30 @@ async def test_list_devices_with_filters(devices_client):
 
     r = await client.get("/api/devices", params={"category": "cat1"})
     assert r.status_code == 200
-    names = {row["name"] for row in r.json()}
+    body = r.json()
+    names = {row["name"] for row in body["items"]}
     assert names == {"A1"}
+    assert body["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_list_devices_pagination(devices_client):
+    client, session = devices_client
+    session.add_all([Device(name=f"D{i:03}", category="c") for i in range(25)])
+    await session.commit()
+
+    p1 = await client.get("/api/devices", params={"category": "c", "page": 1, "page_size": 20})
+    assert p1.status_code == 200
+    b1 = p1.json()
+    assert b1["total"] == 25
+    assert b1["page"] == 1
+    assert b1["page_size"] == 20
+    assert len(b1["items"]) == 20
+
+    p2 = await client.get("/api/devices", params={"category": "c", "page": 2, "page_size": 20})
+    assert p2.status_code == 200
+    b2 = p2.json()
+    assert len(b2["items"]) == 5
 
 
 @pytest.mark.asyncio

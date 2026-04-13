@@ -57,25 +57,29 @@ class TestUserSchemaValidation:
     def test_user_create_valid(self):
         from app.schemas import UserCreate
 
-        user = UserCreate(keycloak_id="kc-123", email="test@test.com")
+        user = UserCreate(keycloak_id="kc-123")
         assert user.keycloak_id == "kc-123"
-        assert user.email == "test@test.com"
-
-    def test_user_update_partial(self):
-        from app.schemas import UserUpdate
-
-        user = UserUpdate(name="new name")
-        assert user.name == "new name"
-        assert "role" not in UserUpdate.model_fields
 
     def test_user_schema_has_expected_fields(self):
         from app.schemas import UserCreate
 
         fields = UserCreate.model_fields.keys()
         assert "keycloak_id" in fields
-        assert "email" in fields
-        assert "name" in fields
-        assert "role" in fields
+        assert "email" not in fields
+
+    def test_user_me_response_has_profile_fields(self):
+        from app.schemas import UserMeResponse
+
+        row = UserMeResponse(
+            id=uuid.uuid4(),
+            keycloak_id="kc",
+            created_at=datetime.now(UTC),
+            email="a@b.com",
+            name=None,
+            role="user",
+        )
+        assert row.role == "user"
+        assert row.email == "a@b.com"
 
 
 class TestReservationSchemaValidation:
@@ -122,6 +126,7 @@ class TestResponseSchemas:
         assert "id" in fields
         assert "keycloak_id" in fields
         assert "created_at" in fields
+        assert "email" not in fields
 
     def test_reservation_response_has_id(self):
         from app.schemas import ReservationResponse

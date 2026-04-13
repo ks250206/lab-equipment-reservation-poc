@@ -8,7 +8,7 @@ from jwt_payload_utils import jwt_like_payload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.auth import get_current_user, get_token_payload
-from app.config import UserRole, settings
+from app.config import settings
 from app.db import Base, get_session
 from app.main import app
 from app.models import User
@@ -29,12 +29,8 @@ async def engine():
 async def users_admin_client(engine):
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as shared:
-        admin = User(
-            keycloak_id="users-admin-kc",
-            email="users-admin@test.com",
-            role=UserRole.ADMIN,
-        )
-        other = User(keycloak_id="users-other-kc", email="other-u@test.com", role=UserRole.USER)
+        admin = User(keycloak_id="users-admin-kc")
+        other = User(keycloak_id="users-other-kc")
         shared.add_all([admin, other])
         await shared.flush()
         await shared.refresh(admin)
@@ -52,6 +48,8 @@ async def users_admin_client(engine):
             return jwt_like_payload(
                 sub=admin.keycloak_id,
                 realm_roles=["app-admin", "offline_access"],
+                email="users-admin@test.com",
+                name="管理者",
             )
 
         app.dependency_overrides[get_session] = override_get_session
@@ -69,7 +67,7 @@ async def users_admin_client(engine):
 async def users_regular_client(engine):
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as shared:
-        user = User(keycloak_id="users-regular-kc", email="regular@test.com", role=UserRole.USER)
+        user = User(keycloak_id="users-regular-kc")
         shared.add(user)
         await shared.flush()
         await shared.refresh(user)
@@ -86,6 +84,7 @@ async def users_regular_client(engine):
             return jwt_like_payload(
                 sub=user.keycloak_id,
                 realm_roles=["default-roles-master"],
+                email="regular@test.com",
             )
 
         app.dependency_overrides[get_session] = override_get_session
@@ -106,7 +105,8 @@ async def test_get_me(users_admin_client):
     assert r.status_code == 200
     body = r.json()
     assert body["id"] == str(admin.id)
-    assert body["email"] == admin.email
+    assert body["email"] == "users-admin@test.com"
+    assert body["name"] == "管理者"
     assert body["role"] == "admin"
 
 
@@ -115,9 +115,13 @@ async def test_list_users_admin(users_admin_client):
     client, _session, _admin, _other = users_admin_client
     r = await client.get("/api/users")
     assert r.status_code == 200
-    emails = {row["email"] for row in r.json()}
-    assert "users-admin@test.com" in emails
-    assert "other-u@test.com" in emails
+    rows = r.json()
+    kc_ids = {row["keycloak_id"] for row in rows}
+    assert "users-admin-kc" in kc_ids
+    assert "users-other-kc" in kc_ids
+    for row in rows:
+        assert "email" not in row
+        assert "name" not in row
 
 
 @pytest.mark.asyncio
@@ -140,42 +144,3 @@ async def test_list_users_forbidden_for_non_admin(users_regular_client):
     client, _session, _user = users_regular_client
     r = await client.get("/api/users")
     assert r.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_put_user_admin_updates(users_admin_client):
-    client, session, _admin, other = users_admin_client
-    r = await client.put(
-        f"/api/users/{other.id}",
-        json={"name": "更新後の名前"},
-    )
-    assert r.status_code == 200
-    body = r.json()
-    assert body["name"] == "更新後の名前"
-    assert body["role"] == "user"
-
-    refreshed = await session.get(User, other.id)
-    assert refreshed is not None
-    assert refreshed.name == "更新後の名前"
-    assert refreshed.role == UserRole.USER
-
-
-@pytest.mark.asyncio
-async def test_put_user_forbidden_for_non_admin(users_regular_client):
-    client, _session, user = users_regular_client
-    r = await client.put(f"/api/users/{user.id}", json={"name": "x"})
-    assert r.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_put_user_invalid_id(users_admin_client):
-    client, _session, _admin, _other = users_admin_client
-    r = await client.put("/api/users/not-uuid", json={"name": "x"})
-    assert r.status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_put_user_missing(users_admin_client):
-    client, _session, _admin, _other = users_admin_client
-    r = await client.put(f"/api/users/{uuid.uuid4()}", json={"name": "x"})
-    assert r.status_code == 404

@@ -136,7 +136,7 @@ class TestDeleteDevice:
         from app.models import Reservation, User
 
         device = await create_device(session, DeviceCreate(**device_data))
-        user = User(keycloak_id="test-user", email="test@test.com")
+        user = User(keycloak_id="test-user")
         session.add(user)
         await session.commit()
 

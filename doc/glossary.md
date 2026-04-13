@@ -10,8 +10,8 @@
 |----------------|---------------------|------|
 | 装置 | Device | 予約の対象となる室内機器・設備 |
 | 予約 | Reservation | 装置・ユーザー・時間帯の組み合わせ |
-| ユーザー | User | Keycloak の `sub` と紐づくアプリ DB 上の利用者行（認証の正は Keycloak。DB は遅延作成・予約 FK 用 UUID とロール等） |
-| 管理者 | admin（`UserRole`） | 装置 CRUD 等の管理操作が許可されたロール |
+| ユーザー | User | Keycloak の `sub` と紐づくアプリ DB 上の行（`id` / `keycloak_id` / `created_at` のみ。認証・プロフィールの正は Keycloak） |
+| 管理者 | app-admin（レルムロール） | JWT の `realm_access.roles` に `KEYCLOAK_APP_ADMIN_REALM_ROLE`（既定 `app-admin`）が含まれると装置 CRUD 等の管理操作が許可される |
 | ファセット検索 | facet search | カテゴリ・場所・状態などの次元で絞り込む検索 |
 | 全文検索クエリ | `q`（クエリパラメータ） | 装置名等を対象とした検索文字列 |
 

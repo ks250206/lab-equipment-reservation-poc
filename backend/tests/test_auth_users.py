@@ -11,9 +11,10 @@ import app.auth as auth_mod
 from app.auth import (
     get_or_create_user_from_payload,
     is_app_admin_from_payload,
+    me_profile_fields_from_payload,
     realm_roles_from_payload,
 )
-from app.config import UserRole, settings
+from app.config import settings
 from app.db import Base
 from app.models import User
 from app.schemas import UserResponse
@@ -39,7 +40,7 @@ async def session(engine):
 
 @pytest.mark.asyncio
 async def test_get_or_create_returns_existing(session: AsyncSession):
-    existing = User(keycloak_id="same-kc", email="keep@test.com", name="既存")
+    existing = User(keycloak_id="same-kc")
     session.add(existing)
     await session.commit()
     await session.refresh(existing)
@@ -49,15 +50,13 @@ async def test_get_or_create_returns_existing(session: AsyncSession):
         {"sub": "same-kc", "email": "ignored@test.com", "name": "無視"},
     )
     assert user.id == existing.id
-    assert user.email == "keep@test.com"
+    assert user.keycloak_id == "same-kc"
 
 
 @pytest.mark.asyncio
 async def test_get_or_create_inserts_without_email(session: AsyncSession):
     user = await get_or_create_user_from_payload(session, {"sub": "anon-kc-1"})
     assert user.keycloak_id == "anon-kc-1"
-    assert user.email == "anon-kc-1@unknown.local"
-    assert user.role == UserRole.USER
 
     result = await session.execute(select(User).where(User.keycloak_id == "anon-kc-1"))
     assert result.scalar_one().id == user.id
@@ -71,12 +70,20 @@ async def test_get_or_create_rejects_missing_sub(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_get_or_create_coerces_invalid_email(session: AsyncSession):
+async def test_get_or_create_inserts_with_invalid_email_claim(session: AsyncSession):
     user = await get_or_create_user_from_payload(
         session,
         {"sub": "kc-bad-email", "email": "not-an-email"},
     )
-    assert user.email == "kc-bad-email@unknown.local"
+    assert user.keycloak_id == "kc-bad-email"
+
+
+def test_me_profile_fields_coerce_invalid_email():
+    email, _name = me_profile_fields_from_payload(
+        {"email": "not-an-email"},
+        "kc-bad-email",
+    )
+    assert email == "kc-bad-email@unknown.local"
 
 
 def test_realm_roles_from_payload_parses_roles():
@@ -96,10 +103,11 @@ def test_is_app_admin_from_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_user_response_accepts_non_rfc_email_from_orm(session: AsyncSession):
-    u = User(keycloak_id="kc-x", email="admin", role=UserRole.USER)
+async def test_user_response_from_orm(session: AsyncSession):
+    u = User(keycloak_id="kc-x")
     session.add(u)
     await session.commit()
     await session.refresh(u)
     body = UserResponse.model_validate(u)
-    assert body.email == "admin"
+    assert body.keycloak_id == "kc-x"
+    assert body.id == u.id

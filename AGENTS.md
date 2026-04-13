@@ -30,12 +30,12 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 3. **テスト**: モックを使わないこと。カバレッジ目標とコマンドは [@doc/development-guidelines.md](doc/development-guidelines.md) に従う。
 4. **変更範囲**: 依頼内容に必要な最小限の変更にとどめ、無関係なリファクタやファイル移動をしない。
 5. **一貫性**: 既存コードの import 形式・抽象度・コメント量に合わせる。新規だけ別スタイルにしない。
-6. **コミット**: イテレーション単位のまとまりができたらローカルコミットする。メッセージ形式は [@doc/development-guidelines.md](doc/development-guidelines.md) の Git 規約に従い、番号・コミット目安は下記「イテレーション一覧」と一致させる。
+6. **コミット**: イテレーション単位のまとまりができたら**必ず**ローカルで `git add` → `git commit` まで完了させる（品質チェックが通った直後など区切りのよいタイミング）。**作業完了を報告する前に `git status` を確認し、未コミットの変更が残っていないこと**を確認する。メッセージ形式は [@doc/development-guidelines.md](doc/development-guidelines.md) の Git 規約に従い、番号・コミット目安は下記「イテレーション一覧」と一致させる。
 7. **README / 入口ドキュメントの更新**: [README.md](README.md) は人間向けの**短い入口**（Nix + just のクイックスタートと `doc/` へのリンク）にとどめる。**各イテレーション完了時**に見直し、詳細な手順・URL 一覧・永続化の説明などは [doc/local-development.md](doc/local-development.md) や [doc/production-operations.md](doc/production-operations.md) へ寄せ、README は要約とリンクだけに保つ。README または入口ドキュメントに変更があれば**必ず**更新する（変更がない場合はスキップでよいが、見直し自体は省かない）。
 8. **本ファイル（AGENTS.md）の更新**: 「必須ルール」の追加・変更・削除、または「イテレーション一覧」のステータス／行の更新があったときに編集する。API・データモデル等の詳細仕様は `doc/` 側へ書き分ける。
 9. **イテレーションごとの品質ループ（必須）**: 各イテレーションの区切りごとに、触ったレイヤー（バックエンド／フロントエンドのいずれかまたは両方）について **format → lint → test** を**必ず**実行する（コマンド例は [@doc/development-guidelines.md](doc/development-guidelines.md) の「イテレーション完了時の品質チェック」）。いずれかが失敗したら修正し、**再度同じチェーンを回してすべて成功するまで繰り返す**。
 10. **リファクタリングのフィードバックループ（必須）**: 上記の結果や型チェック・レビューで示された問題（重複、責務の混在、ガイドライン違反など）を、[@doc/development-guidelines.md](doc/development-guidelines.md) のリファクタ基準とルール4（最小変更）の両方に従って改善する。改善後に**再度 format → lint → test** を実行し、グリーンを確認する。
-11. **イテレーション開始時の steering（必須）**: イテレーション N に着手するときは、**コード・設定・ドキュメントのいずれかを変えるより前**に、[@doc/development-guidelines.md](doc/development-guidelines.md) の「イテレーション開始時の steering」に従い、`steering/iterations/it-NN-<slug>/` に **`implementation.md` / `todo.md` / `work_report.md` の 3 ファイルを必ず作成**する（テンプレは [steering/planning/iteration-starter.md](steering/planning/iteration-starter.md)）。あわせて [AGENTS.md](AGENTS.md) のイテレーション一覧に行 N を追加し、[steering/README.md](steering/README.md) のインデックス表を更新する（未着手または進行中からでよい）。
+11. **イテレーション開始時の steering（必須）**: イテレーション N に着手するときは、**コード・設定・ドキュメントのいずれかを変えるより前**に、[@doc/development-guidelines.md](doc/development-guidelines.md) の「イテレーション開始時の steering」に従い、`steering/iterations/it-NN-<slug>/` に **`implementation.md` / `todo.md` / `work_report.md` の 3 ファイルを必ず作成**する（テンプレは [steering/planning/iteration-starter.md](steering/planning/iteration-starter.md)。**本文は日本語**）。あわせて [AGENTS.md](AGENTS.md) のイテレーション一覧に行 N を追加し、[steering/README.md](steering/README.md) のインデックス表を更新する（未着手または進行中からでよい）。
 
 ---
 
@@ -55,6 +55,11 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 8. タスクランナー（just） | `it8-just` | 完了 |
 | 9. 永続化プロファイル・開発シード | `it9-persistence-seed` | 完了 |
 | 10. Keycloak ロールベース認可（管理者の正） | `it10-keycloak-rbac` | 完了 |
+| 11. users テーブル縮小と Keycloak 正の明文化 | `it11-users-db-slim` | 完了 |
+| 12. フロント User ページ・ヘッダー認証 UI | `it12-frontend-user-page` | 完了 |
+| 13. 装置ページの予約一覧（リスト / 月・週・日カレンダー） | `it13-device-reservations-views` | 完了 |
+| 14. 装置一覧・装置予約リストのページネーション（シード予約拡充） | `it14-list-pagination` | 完了 |
+| 15. 予約リストのユーザー表示（DB プロフィール）とシード日付の 2 か月分散 | `it15-reservation-user-profile-seed` | 完了 |
 
 ---
 

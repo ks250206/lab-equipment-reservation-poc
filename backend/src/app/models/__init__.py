@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..config import DeviceStatus, ReservationStatus, UserRole
+from ..config import DeviceStatus, ReservationStatus
 from ..db import Base
 
 
@@ -18,9 +18,8 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     keycloak_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
 
     reservations: Mapped[list["Reservation"]] = relationship("Reservation", back_populates="user")

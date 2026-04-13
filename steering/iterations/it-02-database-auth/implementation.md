@@ -1,6 +1,8 @@
-# Implementation (Iteration 2 — Database & Auth)
+# 実装内容（イテレーション 2 — データベースと認証）
 
-- **PostgreSQL** schema for core tables (`devices`, `users`, `reservations`) via SQLAlchemy 2.x async models.
-- **Keycloak JWT** verification (`python-jose`, JWKS), FastAPI dependency for the current user with lazy DB sync.
-- **User APIs**: `GET /api/users/me`, admin-only list/detail endpoints.
-- Project layout split into `routers/`, `services/`, `schemas/`, and ORM `models/`.
+## スコープ
+
+- コアテーブル（`devices`、`users`、`reservations`）の **PostgreSQL** スキーマを SQLAlchemy 2.x 非同期モデルで定義。
+- **Keycloak JWT** の検証（`python-jose`、JWKS）、現在ユーザーを返す FastAPI 依存関係と遅延 DB 同期。
+- **ユーザー API**: `GET /api/users/me`、管理者限定の一覧・詳細エンドポイント。
+- `routers/`、`services/`、`schemas/`、ORM `models/` へのプロジェクトレイアウト分割。

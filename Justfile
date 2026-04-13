@@ -43,6 +43,17 @@ deps-ps:
 deps-logs *args:
 	bash "{{root}}/scripts/compose.sh" logs {{args}}
 
+# 開発スタックの Postgres コンテナで対話 psql（要: just deps-up 済み）
+# Podman: podman-compose exec は -it 非対応のため scripts/postgres_interactive.sh 経由
+[group('deps')]
+deps-psql:
+	bash "{{root}}/scripts/postgres_interactive.sh" psql
+
+# 同上コンテナに bash で入る（手動で psql する場合）
+[group('deps')]
+deps-postgres-shell:
+	bash "{{root}}/scripts/postgres_interactive.sh" shell
+
 # --- 本番相当（compose: Keycloak→Postgres / アプリは本番モード） ---
 
 [group('prod')]
@@ -70,6 +81,14 @@ deps-ps-prod:
 [group('prod')]
 deps-logs-prod *args:
 	PERSISTENCE_PROFILE=production bash "{{root}}/scripts/compose.sh" logs {{args}}
+
+[group('prod')]
+deps-psql-prod:
+	PERSISTENCE_PROFILE=production bash "{{root}}/scripts/postgres_interactive.sh" psql
+
+[group('prod')]
+deps-postgres-shell-prod:
+	PERSISTENCE_PROFILE=production bash "{{root}}/scripts/postgres_interactive.sh" shell
 
 [group('prod')]
 backend-run-prod:
@@ -126,7 +145,7 @@ backend-free-port:
 backend-dev:
 	cd "{{root}}/backend" && uv run fastapi dev
 
-# PostgreSQL に users/devices を投入し、Keycloak が起動していれば Admin API で device-reservation クライアントを冪等更新
+# Keycloak にダミー利用者を冪等作成 → users に sub 同期 → devices 投入 → Admin API で SPA クライアント等（要: Keycloak 起動済み）
 [group('dev')]
 seed-dev:
 	cd "{{root}}/backend" && PYTHONPATH=src uv run python -m app.seeding
