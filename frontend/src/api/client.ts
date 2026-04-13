@@ -130,6 +130,27 @@ export async function fetchDeviceReservationsAllInRange(
   return merged;
 }
 
+export async function updateReservation(
+  token: string,
+  reservationId: string,
+  body: {
+    start_time?: string;
+    end_time?: string;
+    purpose?: string | null;
+    status?: string;
+  },
+): Promise<Reservation> {
+  const res = await fetch(buildUrl(`/reservations/${reservationId}`), {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  return parseJson<Reservation>(res);
+}
+
 export async function createReservation(
   token: string,
   body: { device_id: string; start_time: string; end_time: string; purpose?: string },

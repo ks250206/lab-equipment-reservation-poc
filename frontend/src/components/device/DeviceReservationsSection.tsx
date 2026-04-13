@@ -1,4 +1,4 @@
-import type { DatesSetArg } from "@fullcalendar/core";
+import type { DatesSetArg, EventClickArg } from "@fullcalendar/core";
 import jaLocale from "@fullcalendar/core/locales/ja.js";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -11,11 +11,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { fetchDeviceReservations, fetchDeviceReservationsAllInRange } from "@/api/client";
-import type { PageSize } from "@/api/types";
+import type { PageSize, Reservation } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
+import { ReservationDetailDialog } from "@/components/device/ReservationDetailDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { reservationsToFullCalendarEvents } from "@/lib/deviceReservationCalendar";
+import {
+  reservationsToFullCalendarEvents,
+  type DeviceReservationCalendarExtendedProps,
+} from "@/lib/deviceReservationCalendar";
 
 type ViewMode = "list" | "month" | "week" | "day";
 
@@ -31,6 +35,8 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
   const [queryRange, setQueryRange] = useState(initialCalendarMonthRange);
   const [listPage, setListPage] = useState(1);
   const [listPageSize, setListPageSize] = useState<PageSize>(50);
+  const [modalReservation, setModalReservation] = useState<Reservation | null>(null);
+  const [modalEditable, setModalEditable] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
 
   const onDatesSet = useCallback((arg: DatesSetArg) => {
@@ -116,12 +122,20 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
     if (listPage > totalPages) setListPage(totalPages);
   }, [listReservationsQuery.isSuccess, listReservationsQuery.data, listPage, listPageSize]);
 
+  const myUserId = meQuery.data?.id;
+
   const calendarEvents = useMemo(
-    () => reservationsToFullCalendarEvents(calendarReservationsQuery.data ?? []),
-    [calendarReservationsQuery.data],
+    () => reservationsToFullCalendarEvents(calendarReservationsQuery.data ?? [], myUserId),
+    [calendarReservationsQuery.data, myUserId],
   );
 
-  const myUserId = meQuery.data?.id;
+  const onEventClick = useCallback((arg: EventClickArg) => {
+    const ext = arg.event.extendedProps as DeviceReservationCalendarExtendedProps;
+    if (!ext?.reservation) return;
+    arg.jsEvent.preventDefault();
+    setModalReservation(ext.reservation);
+    setModalEditable(Boolean(ext.isMine));
+  }, []);
 
   const shiftListMonth = (delta: number) => {
     setQueryRange((r) => ({
@@ -229,6 +243,13 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
 
       {viewMode === "list" && listReservationsQuery.isSuccess && (
         <div className="space-y-3">
+          <ListPaginationBar
+            total={listReservationsQuery.data.total}
+            page={listPage}
+            pageSize={listPageSize}
+            onPageChange={setListPage}
+            onPageSizeChange={setListPageSize}
+          />
           <div className="overflow-x-auto rounded-lg border border-zinc-200">
             <table className="min-w-full border-collapse text-sm">
               <thead className="bg-zinc-50 text-left text-zinc-600">
@@ -281,13 +302,6 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
               </tbody>
             </table>
           </div>
-          <ListPaginationBar
-            total={listReservationsQuery.data.total}
-            page={listPage}
-            pageSize={listPageSize}
-            onPageChange={setListPage}
-            onPageSizeChange={setListPageSize}
-          />
         </div>
       )}
 
@@ -308,6 +322,13 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
             headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
             datesSet={onDatesSet}
             events={calendarEvents}
+            eventClick={onEventClick}
+            views={{
+              dayGridMonth: {
+                dayMaxEvents: 3,
+                moreLinkContent: (arg) => `+${arg.num}件`,
+              },
+            }}
             height="auto"
             editable={false}
             selectable={false}
@@ -324,6 +345,19 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
         </Link>
         から行えます。
       </p>
+
+      <ReservationDetailDialog
+        open={modalReservation !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setModalReservation(null);
+          }
+        }}
+        reservation={modalReservation}
+        editable={modalEditable}
+        deviceId={deviceId}
+        getValidToken={getValidToken}
+      />
     </div>
   );
 }

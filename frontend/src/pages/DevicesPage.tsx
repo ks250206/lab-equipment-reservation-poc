@@ -139,6 +139,15 @@ export function DevicesPage() {
         </p>
       ) : (
         <div className="space-y-3">
+          {deviceQuery.isSuccess && deviceQuery.data ? (
+            <ListPaginationBar
+              total={deviceQuery.data.total}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          ) : null}
           <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white shadow-sm">
             {deviceQuery.data?.total === 0 ? (
               <li className="p-4 text-sm text-zinc-600">該当する装置がありません。</li>
@@ -160,15 +169,6 @@ export function DevicesPage() {
               ))
             )}
           </ul>
-          {deviceQuery.isSuccess && deviceQuery.data ? (
-            <ListPaginationBar
-              total={deviceQuery.data.total}
-              page={page}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-            />
-          ) : null}
         </div>
       )}
     </div>

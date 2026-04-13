@@ -30,7 +30,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 3. **テスト**: モックを使わないこと。カバレッジ目標とコマンドは [@doc/development-guidelines.md](doc/development-guidelines.md) に従う。
 4. **変更範囲**: 依頼内容に必要な最小限の変更にとどめ、無関係なリファクタやファイル移動をしない。
 5. **一貫性**: 既存コードの import 形式・抽象度・コメント量に合わせる。新規だけ別スタイルにしない。
-6. **コミット**: イテレーション単位のまとまりができたら**必ず**ローカルで `git add` → `git commit` まで完了させる（品質チェックが通った直後など区切りのよいタイミング）。**作業完了を報告する前に `git status` を確認し、未コミットの変更が残っていないこと**を確認する。メッセージ形式は [@doc/development-guidelines.md](doc/development-guidelines.md) の Git 規約に従い、番号・コミット目安は下記「イテレーション一覧」と一致させる。
+6. **コミット**: 自動生成された実装が常に望ましいとは限らない。**利用者による確認・修正（HITL: Human-in-the-loop）を終えたあと**に、イテレーション単位で `git add` → `git commit` する。エージェントは品質チェックが通った直後に **`git commit` まで勝手に進めない**（利用者がコミットを明示的に依頼した場合はその限りでない）。作業完了の報告時点で未コミットが残っていてもよい。メッセージ形式は [@doc/development-guidelines.md](doc/development-guidelines.md) の Git 規約に従い、番号・コミット目安は下記「イテレーション一覧」と一致させる。
 7. **README / 入口ドキュメントの更新**: [README.md](README.md) は人間向けの**短い入口**（Nix + just のクイックスタートと `doc/` へのリンク）にとどめる。**各イテレーション完了時**に見直し、詳細な手順・URL 一覧・永続化の説明などは [doc/local-development.md](doc/local-development.md) や [doc/production-operations.md](doc/production-operations.md) へ寄せ、README は要約とリンクだけに保つ。README または入口ドキュメントに変更があれば**必ず**更新する（変更がない場合はスキップでよいが、見直し自体は省かない）。
 8. **本ファイル（AGENTS.md）の更新**: 「必須ルール」の追加・変更・削除、または「イテレーション一覧」のステータス／行の更新があったときに編集する。API・データモデル等の詳細仕様は `doc/` 側へ書き分ける。
 9. **イテレーションごとの品質ループ（必須）**: 各イテレーションの区切りごとに、触ったレイヤー（バックエンド／フロントエンドのいずれかまたは両方）について **format → lint → test** を**必ず**実行する（コマンド例は [@doc/development-guidelines.md](doc/development-guidelines.md) の「イテレーション完了時の品質チェック」）。いずれかが失敗したら修正し、**再度同じチェーンを回してすべて成功するまで繰り返す**。
@@ -60,6 +60,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 13. 装置ページの予約一覧（リスト / 月・週・日カレンダー） | `it13-device-reservations-views` | 完了 |
 | 14. 装置一覧・装置予約リストのページネーション（シード予約拡充） | `it14-list-pagination` | 完了 |
 | 15. 予約リストのユーザー表示（DB プロフィール）とシード日付の 2 か月分散 | `it15-reservation-user-profile-seed` | 完了 |
+| 16. リスト上ページネーション・カレンダー（時刻+氏名・月省略）・予約詳細モーダル | `it16-reservation-calendar-modal` | 完了 |
 
 ---
 

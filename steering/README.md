@@ -44,5 +44,6 @@
 | 13 | `iterations/it-13-device-reservations-views/` | 装置ページの予約一覧（リスト / 月・週・日カレンダー） |
 | 14 | `iterations/it-14-list-pagination/` | 装置一覧・装置予約リストのページネーション（シード予約拡充） |
 | 15 | `iterations/it-15-reservation-user-profile-seed/` | 予約リストのユーザー表示（DB プロフィール）とシード日付の 2 か月分散 |
+| 16 | `iterations/it-16-reservation-calendar-modal/` | リスト上ページネーション・カレンダー表示・予約モーダル |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。

@@ -10,14 +10,7 @@ import {
   fetchReservations,
 } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
-
-function localInputToIso(value: string): string {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) {
-    throw new Error("日時の形式が正しくありません");
-  }
-  return d.toISOString();
-}
+import { localDatetimeInputToIso } from "@/lib/datetimeLocal";
 
 export function ReservationsPage() {
   const { authenticated, ready, login, getValidToken } = useAuth();
@@ -60,8 +53,8 @@ export function ReservationsPage() {
       }
       return createReservation(token, {
         device_id: deviceId,
-        start_time: localInputToIso(startLocal),
-        end_time: localInputToIso(endLocal),
+        start_time: localDatetimeInputToIso(startLocal),
+        end_time: localDatetimeInputToIso(endLocal),
         purpose: purpose.trim() || undefined,
       });
     },

@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Reservation } from "../src/api/types";
-import { reservationsToFullCalendarEvents } from "../src/lib/deviceReservationCalendar";
+import {
+  reservationDisplayName,
+  reservationsToFullCalendarEvents,
+} from "../src/lib/deviceReservationCalendar";
 
 const baseReservation: Reservation = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -15,20 +18,67 @@ const baseReservation: Reservation = {
 };
 
 describe("reservationsToFullCalendarEvents", () => {
-  it("目的が空のときタイトルは「予約」", () => {
-    const events = reservationsToFullCalendarEvents([baseReservation]);
-    expect(events).toEqual([
-      {
-        id: baseReservation.id,
-        title: "予約",
-        start: baseReservation.start_time,
-        end: baseReservation.end_time,
-      },
-    ]);
+  const prevTz = process.env.TZ;
+
+  beforeAll(() => {
+    process.env.TZ = "UTC";
   });
 
-  it("目的の文字列をタイトルに使う", () => {
-    const events = reservationsToFullCalendarEvents([{ ...baseReservation, purpose: "  試験  " }]);
-    expect(events[0]?.title).toBe("  試験  ");
+  afterAll(() => {
+    process.env.TZ = prevTz;
+  });
+
+  it("目的ではなく時刻レンジと氏名をタイトルにする", () => {
+    const events = reservationsToFullCalendarEvents([
+      {
+        ...baseReservation,
+        user_name: "山田",
+        user_email: "yamada@example.com",
+      },
+    ]);
+    expect(events[0]?.title).toBe("10:00–11:00 山田");
+  });
+
+  it("氏名が空のときメールをタイトルに含める", () => {
+    const events = reservationsToFullCalendarEvents([
+      { ...baseReservation, user_name: null, user_email: "only@example.com" },
+    ]);
+    expect(events[0]?.title).toBe("10:00–11:00 only@example.com");
+  });
+
+  it("氏名・メールが空のときフォールバック文言", () => {
+    const events = reservationsToFullCalendarEvents([
+      { ...baseReservation, user_name: null, user_email: null },
+    ]);
+    expect(events[0]?.title).toBe("10:00–11:00 （名前なし）");
+  });
+
+  it("extendedProps に予約と isMine を載せる", () => {
+    const mineId = baseReservation.user_id;
+    const events = reservationsToFullCalendarEvents([baseReservation], mineId);
+    expect(events[0]?.extendedProps).toEqual({
+      reservation: baseReservation,
+      isMine: true,
+    });
+  });
+
+  it("myUserId が一致しないとき isMine は false", () => {
+    const events = reservationsToFullCalendarEvents(
+      [baseReservation],
+      "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    );
+    expect(events[0]?.extendedProps).toMatchObject({ isMine: false });
+  });
+});
+
+describe("reservationDisplayName", () => {
+  it("氏名優先", () => {
+    expect(
+      reservationDisplayName({
+        ...baseReservation,
+        user_name: "  佐藤  ",
+        user_email: "sato@example.com",
+      }),
+    ).toBe("佐藤");
   });
 });
