@@ -273,3 +273,31 @@ class TestReservationService:
 
         await delete_reservation(session, re_times)
         assert await get_reservation(session, res.id) is None
+
+    async def test_delete_completed_reservation_raises(self, session: AsyncSession):
+        from app.config import ReservationStatus
+        from app.models import Reservation
+        from app.services.reservations import delete_reservation, get_reservation
+
+        device = Device(name="svc-completed")
+        user = User(keycloak_id="svc-completed-u")
+        session.add_all([device, user])
+        await session.commit()
+        await session.refresh(device)
+        await session.refresh(user)
+
+        row = Reservation(
+            device_id=device.id,
+            user_id=user.id,
+            start_time=datetime(2026, 5, 20, 10, 0, tzinfo=UTC),
+            end_time=datetime(2026, 5, 20, 11, 0, tzinfo=UTC),
+            status=ReservationStatus.COMPLETED,
+        )
+        session.add(row)
+        await session.commit()
+        await session.refresh(row)
+
+        with pytest.raises(ValueError, match="Completed"):
+            await delete_reservation(session, row)
+
+        assert await get_reservation(session, row.id) is not None

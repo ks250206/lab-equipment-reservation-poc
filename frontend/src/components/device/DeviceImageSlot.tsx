@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import { deviceImageUrl } from "@/lib/deviceImageUrl";
 
@@ -8,6 +9,8 @@ type DeviceImageSlotProps = {
   /** 一覧の再取得後にキャッシュを避けるため `updated_at` 等を渡す */
   cacheBust?: string;
   className?: string;
+  /** 指定時はクリックで装置詳細へ遷移（サムネ・一覧の画像枠用） */
+  to?: string;
 };
 
 /**
@@ -18,14 +21,15 @@ export function DeviceImageSlot({
   hasImage,
   cacheBust,
   className,
+  to,
 }: DeviceImageSlotProps) {
   const [broken, setBroken] = useState(false);
   const showImg = hasImage && !broken;
 
-  return (
-    <div
-      className={`relative flex min-h-[5rem] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 ${className ?? ""}`}
-    >
+  const shellClass = `relative flex min-h-[5rem] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 ${className ?? ""}`;
+
+  const body = (
+    <>
       {showImg ? (
         <img
           src={deviceImageUrl(deviceId, cacheBust)}
@@ -42,6 +46,20 @@ export function DeviceImageSlot({
           <span>画像なし</span>
         </div>
       ) : null}
-    </div>
+    </>
   );
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className={`${shellClass} block ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+        aria-label="装置の詳細を表示"
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  return <div className={shellClass}>{body}</div>;
 }

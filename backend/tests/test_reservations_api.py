@@ -253,6 +253,53 @@ async def test_delete_reservation(reservation_client):
 
 
 @pytest.mark.asyncio
+async def test_delete_completed_reservation_returns_409(reservation_client):
+    client, session, owner = reservation_client
+    device = Device(name="完了済み削除不可")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    row = Reservation(
+        device_id=device.id,
+        user_id=owner.id,
+        start_time=datetime(2026, 8, 1, 10, 0, tzinfo=UTC),
+        end_time=datetime(2026, 8, 1, 11, 0, tzinfo=UTC),
+        status=ReservationStatus.COMPLETED,
+    )
+    session.add(row)
+    await session.commit()
+    await session.refresh(row)
+
+    r = await client.delete(f"/api/reservations/{row.id}")
+    assert r.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_put_completed_reservation_returns_409(reservation_client):
+    client, session, owner = reservation_client
+    device = Device(name="完了済み更新不可")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    row = Reservation(
+        device_id=device.id,
+        user_id=owner.id,
+        start_time=datetime(2026, 8, 2, 10, 0, tzinfo=UTC),
+        end_time=datetime(2026, 8, 2, 11, 0, tzinfo=UTC),
+        status=ReservationStatus.COMPLETED,
+        purpose="確定済み",
+    )
+    session.add(row)
+    await session.commit()
+    await session.refresh(row)
+
+    r = await client.put(f"/api/reservations/{row.id}", json={"purpose": "書き換え"})
+    assert r.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_post_reservation_unknown_device_404(reservation_client):
     client, _session, _owner = reservation_client
     r = await client.post(

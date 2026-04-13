@@ -214,6 +214,9 @@ async def delete_reservation(
     session: AsyncSession,
     reservation: Reservation,
 ) -> None:
+    if reservation.status == ReservationStatus.COMPLETED:
+        msg = "Completed reservations cannot be deleted"
+        raise ValueError(msg)
     await session.delete(reservation)
     await session.commit()
 

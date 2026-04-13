@@ -18,7 +18,11 @@ from ..schemas import (
     ReservationResponse,
     ReservationUpdate,
 )
-from ..services.reservations import check_time_overlap, list_reservations_for_user_paginated
+from ..services.reservations import (
+    check_time_overlap,
+    delete_reservation as delete_reservation_record,
+    list_reservations_for_user_paginated,
+)
 
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
 
@@ -181,6 +185,12 @@ async def update_reservation(
             detail="Reservation not found",
         )
 
+    if reservation.status == ReservationStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Completed reservations cannot be modified",
+        )
+
     update_dict = reservation_data.model_dump(exclude_unset=True)
 
     new_start = (
@@ -249,5 +259,13 @@ async def delete_reservation(
             detail="Reservation not found",
         )
 
-    await session.delete(reservation)
-    await session.commit()
+    try:
+        await delete_reservation_record(session, reservation)
+    except ValueError as e:
+        detail = str(e)
+        if detail == "Completed reservations cannot be deleted":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=detail,
+            ) from e
+        raise

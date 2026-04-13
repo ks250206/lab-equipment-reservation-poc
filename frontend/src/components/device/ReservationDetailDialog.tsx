@@ -70,6 +70,7 @@ export function ReservationDetailDialog({
     ? reservation.user_name?.trim() || reservation.user_email?.trim() || "（名前なし）"
     : "";
   const displayEmail = reservation?.user_email?.trim() || "—";
+  const readOnly = !editable || reservation?.status === "completed";
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -78,14 +79,18 @@ export function ReservationDetailDialog({
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
           <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[min(100vw-2rem,28rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 shadow-lg outline-none">
             <Dialog.Title className="text-lg font-medium text-zinc-900">
-              {editable ? "予約の編集" : "予約の詳細"}
+              {readOnly ? "予約の詳細" : "予約の編集"}
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-zinc-600">
-              {editable ? "内容を変更して保存できます。" : "閲覧のみです。"}
+              {readOnly
+                ? reservation?.status === "completed" && editable
+                  ? "完了済みのため変更できません。"
+                  : "閲覧のみです。"
+                : "内容を変更して保存できます。"}
             </Dialog.Description>
 
             <div className="mt-4 space-y-3 text-sm">
-              {!editable ? (
+              {readOnly ? (
                 <>
                   <div>
                     <p className="text-xs font-medium text-zinc-500">開始</p>
@@ -180,7 +185,7 @@ export function ReservationDetailDialog({
                   閉じる
                 </button>
               </Dialog.Close>
-              {editable ? (
+              {!readOnly ? (
                 <button
                   type="button"
                   disabled={updateMut.isPending}

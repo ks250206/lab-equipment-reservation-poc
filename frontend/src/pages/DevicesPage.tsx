@@ -195,6 +195,7 @@ export function DevicesPage() {
                   hasImage={d.has_image ?? false}
                   cacheBust={d.updated_at}
                   className="h-36 w-full shrink-0 sm:h-auto sm:w-44"
+                  to={`/devices/${d.id}`}
                 />
                 <div className="min-w-0 flex-1 space-y-2 text-sm">
                   <div className="flex items-start gap-2">
@@ -235,6 +236,7 @@ export function DevicesPage() {
               hasImage={d.has_image ?? false}
               cacheBust={d.updated_at}
               className="aspect-[4/3] w-full"
+              to={`/devices/${d.id}`}
             />
             <div className="space-y-1 p-3">
               <div className="flex items-start gap-1.5">

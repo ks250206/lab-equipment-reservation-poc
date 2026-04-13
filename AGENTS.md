@@ -67,6 +67,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 20. 装置一覧 URL 同期・予約一覧のページング／フィルター／編集 | `it20-device-list-url-reservations-edit` | 完了 |
 | 21. リロード後の Keycloak セッション復元（silent check-sso） | `it21-keycloak-reload-session` | 完了 |
 | 22. 装置お気に入り・一覧マイ向けフィルタ・装置予約リスト絞り込み・カレンダー色分け | `it22-device-favorites-filters-calendar` | 完了 |
+| 23. サムネ画像リンク・完了予約の削除／更新禁止 | `it23-thumbnail-link-completed-lock` | 完了 |
 
 ---
 

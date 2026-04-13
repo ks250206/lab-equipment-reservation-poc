@@ -395,9 +395,19 @@ export function ReservationsPage() {
                       </button>
                       <button
                         type="button"
-                        className="text-sm text-red-700 underline"
-                        disabled={deleteMut.isPending}
+                        className={
+                          r.status === "completed"
+                            ? "cursor-not-allowed rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-sm text-zinc-400"
+                            : "text-sm text-red-700 underline"
+                        }
+                        disabled={deleteMut.isPending || r.status === "completed"}
+                        title={
+                          r.status === "completed"
+                            ? "完了済みの予約は削除できません"
+                            : undefined
+                        }
                         onClick={() => {
+                          if (r.status === "completed") return;
                           if (window.confirm("この予約を削除しますか？")) {
                             deleteMut.mutate(r.id);
                           }
