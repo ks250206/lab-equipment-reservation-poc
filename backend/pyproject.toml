@@ -1,5 +1,5 @@
 [project]
-name = "device-reservation"
+name = "equipment-reservation"
 version = "0.1.0"
 description = "研究室装置予約システム PoC"
 requires-python = ">=3.13"

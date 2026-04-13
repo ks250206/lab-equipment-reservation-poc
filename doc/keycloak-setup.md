@@ -2,13 +2,13 @@
 
 このドキュメントは、**ブラウザで動く React アプリ**が Keycloak でログインできるようにするための、管理コンソールでの作業を順に説明します。表示ラベルは Keycloak のバージョンで多少異なる場合がありますが、**設定すべき項目の意味**は共通です。
 
-**自動設定**: 開発環境では `just seed-dev`（`ENVIRONMENT=development`）が **Keycloak 起動済み**であることを前提に、(1) ダミー利用者 8 名（`seed-yamada` 等）を Admin API で冪等作成しアプリ DB の `users.keycloak_id` に同期、(2) 本書と同等の **`device-reservation` 公開クライアント**を冪等で作成・更新、(3) レルムロール `app-admin` の付与、を行います。Keycloak に接続できず (1) ができないときは **シード全体が失敗**します。(2)(3) だけ Admin エラー等でスキップされる場合はメッセージのみで終了コード 0 のままです。
+**自動設定**: 開発環境では `just seed-dev`（`ENVIRONMENT=development`）が **Keycloak 起動済み**であることを前提に、(1) ダミー利用者 8 名（`seed-yamada` 等）を Admin API で冪等作成しアプリ DB の `users.keycloak_id` に同期、(2) 本書と同等の **`equipment-reservation` 公開クライアント**を冪等で作成・更新、(3) レルムロール `app-admin` の付与、を行います。Keycloak に接続できず (1) ができないときは **シード全体が失敗**します。(2)(3) だけ Admin エラー等でスキップされる場合はメッセージのみで終了コード 0 のままです。
 
 ## なぜこの作業が必要か
 
 - フロント（`keycloak-js`）は、Keycloak の **OIDC エンドポイント**にブラウザをリダイレクトしてログインし、**アクセストークン**を取得します。
 - そのために Keycloak 側に **「どのアプリからのログインを許可するか」** を登録した **クライアント** が必要です。
-- このリポジトリでは `frontend/.env` の **`VITE_KEYCLOAK_CLIENT_ID`**（既定: `device-reservation`）と **同じ Client ID** のクライアントを、**`VITE_KEYCLOAK_REALM`**（既定: `master`）という **レルム** の中に作ります。
+- このリポジトリでは `frontend/.env` の **`VITE_KEYCLOAK_CLIENT_ID`**（既定: `equipment-reservation`）と **同じ Client ID** のクライアントを、**`VITE_KEYCLOAK_REALM`**（既定: `master`）という **レルム** の中に作ります。
 
 用語の対応:
 
@@ -29,7 +29,7 @@
 | `clientAuthenticatorType` | **`client-secret`** | 公開クライアントではシークレット認証を使わない（UI では Client authentication **Off**） |
 | `secret` | 長い文字列がある | フロントに埋め込めない。**機密クライアント**はサーバ専用向け |
 
-**対処**: **Clients** → **`device-reservation`** → **Capability config**（または設定に「Client authentication」がある画面）で **Client authentication を Off** にし、**Save**。保存後に再度 JSON を見て **`publicClient": true`** になっていることを確認してください。
+**対処**: **Clients** → **`equipment-reservation`** → **Capability config**（または設定に「Client authentication」がある画面）で **Client authentication を Off** にし、**Save**。保存後に再度 JSON を見て **`publicClient": true`** になっていることを確認してください。
 
 初回作成ウィザードで **Client authentication を On のまま**進めると、まさに今の JSON の状態になります。必ず **Off** にしてください。
 
@@ -41,7 +41,7 @@
 
    - `VITE_KEYCLOAK_URL=http://localhost:8080`
    - `VITE_KEYCLOAK_REALM=master`
-   - `VITE_KEYCLOAK_CLIENT_ID=device-reservation`
+   - `VITE_KEYCLOAK_CLIENT_ID=equipment-reservation`
 
 別レルムや別 Client ID にした場合は、**以降の手順で作る名前を `.env` に合わせる**（逆に、手順に合わせて `.env` を直す）必要があります。
 
@@ -71,7 +71,7 @@
 ### 画面「General settings」（一般設定）
 
 - **Client type**: **OpenID Connect** のまま（既定でよいことが多い）。
-- **Client ID**: **`device-reservation`** と入力する（`VITE_KEYCLOAK_CLIENT_ID` と**完全一致**）。
+- **Client ID**: **`equipment-reservation`** と入力する（`VITE_KEYCLOAK_CLIENT_ID` と**完全一致**）。
 
 必要なら **Name** に表示用の名前（例: Device Reservation SPA）を入れる。必須ではない。
 
@@ -121,7 +121,7 @@
 3. アプリの **ログイン** を実行し、Keycloak のログイン画面に遷移することを確認する。
 4. ログイン後、アプリに戻り、エラーなく画面が続くことを確認する。
 
-管理コンソールで **Clients** → **`device-reservation`** → **Sessions** などを見ると、アクティブセッションが増えている場合があります。
+管理コンソールで **Clients** → **`equipment-reservation`** → **Sessions** などを見ると、アクティブセッションが増えている場合があります。
 
 ## よくあるつまずき
 

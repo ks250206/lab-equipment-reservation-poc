@@ -115,7 +115,7 @@ ER 図は PoC では省略するが、上記 FK 関係を正とする。
 **`POST /api/devices/{id}/image` の検証（PoC）**
 
 - **拡張子・MIME**: PNG / JPEG のみ（`Content-Type` は `image/png` または `image/jpeg`）。
-- **容量**: 環境変数 `DEVICE_IMAGE_MAX_BYTES`（既定 **2 MiB**）以下。
+- **容量**: 環境変数 `EQUIPMENT_IMAGE_MAX_BYTES`（互換: `DEVICE_IMAGE_MAX_BYTES`、既定 **2 MiB**）以下。
 - **内容**: 先頭バイトの粗判定に加え、**Pillow** で画像として解釈できること（改ざんされた拡張子を拒否）。
 
 **`GET /api/devices` ページング**
@@ -200,7 +200,7 @@ ER 図は PoC では省略するが、上記 FK 関係を正とする。
 
 - URL: `http://localhost:8080`
 - Realm: `master`
-- Client ID: `device-reservation`
+- Client ID: `equipment-reservation`
 - Web Origins / Redirect: `http://localhost:5173`（Vite 開発サーバー）
 
 ### 4.2 JWT フロー

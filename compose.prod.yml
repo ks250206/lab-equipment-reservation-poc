@@ -18,7 +18,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
-    container_name: device-reservation-keycloak
+    container_name: equipment-reservation-keycloak
     command: start-dev
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?Set KEYCLOAK_ADMIN in .env before running the production profile}

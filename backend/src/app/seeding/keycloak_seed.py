@@ -48,7 +48,7 @@ def _keycloak_client() -> httpx.AsyncClient:
 def _apply_spa_fields(body: dict[str, Any]) -> dict[str, Any]:
     """既存クライアント JSON に PoC 用の SPA 設定を上書きする。"""
     out = dict(body)
-    out["clientId"] = out.get("clientId") or "device-reservation"
+    out["clientId"] = out.get("clientId") or "equipment-reservation"
     out["publicClient"] = True
     out["protocol"] = "openid-connect"
     out["standardFlowEnabled"] = True
@@ -90,7 +90,7 @@ async def _admin_token(
     return token
 
 
-async def ensure_keycloak_device_reservation_client(settings: Settings) -> str:
+async def ensure_keycloak_equipment_reservation_client(settings: Settings) -> str:
     """
     Keycloak の `settings.keycloak_client_id` を公開クライアントとして冪等に揃える。
 

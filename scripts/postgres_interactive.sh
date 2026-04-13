@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Postgres コンテナで対話 psql / bash を開く。
 # podman-compose の `exec` は `-it` を解釈しないため、Podman 時は compose.yml の
-# container_name（device-reservation-postgres）へ直接 podman exec する。
+# container_name（equipment-reservation-postgres）へ直接 podman exec する。
 # Docker 時は scripts/compose.sh exec -it …（Compose V2 / docker-compose）を使う。
 #
 # 使い方: postgres_interactive.sh psql | shell
@@ -11,7 +11,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNTIME="${DEV_CONTAINER_RUNTIME:-podman}"
 MODE="${1:-}"
-POSTGRES_CONTAINER_NAME="device-reservation-postgres"
+POSTGRES_CONTAINER_NAME="equipment-reservation-postgres"
 
 if [[ "$MODE" != "psql" && "$MODE" != "shell" ]]; then
   echo "使い方: $0 psql | shell" >&2
@@ -25,7 +25,7 @@ run_docker() {
 
 if [[ "$RUNTIME" == "docker" ]]; then
   if [[ "$MODE" == "psql" ]]; then
-    run_docker psql -U dev_user -d device_reservation
+    run_docker psql -U dev_user -d equipment_reservation
   else
     run_docker bash
   fi
@@ -43,7 +43,7 @@ if ! podman inspect -t container "$POSTGRES_CONTAINER_NAME" >/dev/null 2>&1; the
 fi
 
 if [[ "$MODE" == "psql" ]]; then
-  podman exec -it "$POSTGRES_CONTAINER_NAME" psql -U dev_user -d device_reservation
+  podman exec -it "$POSTGRES_CONTAINER_NAME" psql -U dev_user -d equipment_reservation
 else
   podman exec -it "$POSTGRES_CONTAINER_NAME" bash
 fi

@@ -88,7 +88,7 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
 
   const listReservationsQuery = useQuery({
     queryKey: [
-      "device-reservations",
+      "equipment-reservations",
       deviceId,
       queryRange.start.toISOString(),
       queryRange.end.toISOString(),
@@ -117,7 +117,7 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
 
   const calendarReservationsQuery = useQuery({
     queryKey: [
-      "device-reservations",
+      "equipment-reservations",
       deviceId,
       queryRange.start.toISOString(),
       queryRange.end.toISOString(),

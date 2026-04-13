@@ -10,8 +10,8 @@
 
 ## Keycloak とアプリ DB の関係
 
-- **開発**: Keycloak のレルムデータは **dev-file** ストレージに置き、アプリの `device_reservation` データベースとは別。
-- **本番プロファイル**: Keycloak はアプリと同一 Postgres サーバ上の **別データベース**（`keycloak`）を JDBC で利用。`device_reservation` スキーマとは独立。
+- **開発**: Keycloak のレルムデータは **dev-file** ストレージに置き、アプリの `equipment_reservation` データベースとは別。
+- **本番プロファイル**: Keycloak はアプリと同一 Postgres サーバ上の **別データベース**（`keycloak`）を JDBC で利用。`equipment_reservation` スキーマとは独立。
 
 ## 非目標
 

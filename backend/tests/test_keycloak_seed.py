@@ -16,25 +16,25 @@ def test_post_logout_uris_joins_with_hash_pair():
 def test_clients_matching_client_id_exact_only():
     raw = [
         {"id": "a", "clientId": "account"},
-        {"id": "b", "clientId": "device-reservation"},
+        {"id": "b", "clientId": "equipment-reservation"},
     ]
-    m = _clients_matching_client_id(raw, "device-reservation")
+    m = _clients_matching_client_id(raw, "equipment-reservation")
     assert len(m) == 1
     assert m[0]["id"] == "b"
 
 
 def test_clients_matching_ignores_non_dict_and_partial_client_id():
     raw: list = [
-        {"id": "a", "clientId": "device-reservation-wrong"},
+        {"id": "a", "clientId": "equipment-reservation-wrong"},
         12,
         "x",
         {},
     ]
-    assert _clients_matching_client_id(raw, "device-reservation") == []
+    assert _clients_matching_client_id(raw, "equipment-reservation") == []
 
 
 def test_apply_spa_fields_public_client_and_redirects():
-    body = _apply_spa_fields({"clientId": "device-reservation", "enabled": True})
+    body = _apply_spa_fields({"clientId": "equipment-reservation", "enabled": True})
     assert body["publicClient"] is True
     assert body["standardFlowEnabled"] is True
     assert body["directAccessGrantsEnabled"] is False

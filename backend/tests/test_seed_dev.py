@@ -59,10 +59,10 @@ def test_settings_accept_explicit_core_config_from_env_file(
         "\n".join(
             [
                 "ENVIRONMENT=production",
-                "DATABASE_URL=postgresql+asyncpg://prod_user:prod_password@db:5432/device_reservation",
+                "DATABASE_URL=postgresql+asyncpg://prod_user:prod_password@db:5432/equipment_reservation",
                 "KEYCLOAK_URL=https://auth.example.test",
                 "KEYCLOAK_REALM=laboratory",
-                "KEYCLOAK_CLIENT_ID=device-reservation",
+                "KEYCLOAK_CLIENT_ID=equipment-reservation",
             ]
         ),
         encoding="utf-8",

@@ -180,7 +180,7 @@ export function ReservationsPage() {
     onSuccess: () => {
       toast("予約をキャンセルしました");
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
-      void queryClient.invalidateQueries({ queryKey: ["device-reservations"] });
+      void queryClient.invalidateQueries({ queryKey: ["equipment-reservations"] });
     },
   });
 

@@ -70,7 +70,7 @@ export function ReservationUsageCompletePage() {
       toast("利用完了を報告しました");
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
       void queryClient.invalidateQueries({ queryKey: ["reservations-usage-complete"] });
-      void queryClient.invalidateQueries({ queryKey: ["device-reservations"] });
+      void queryClient.invalidateQueries({ queryKey: ["equipment-reservations"] });
     },
     onError: (e: Error) => {
       setActionError(e.message);

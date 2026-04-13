@@ -60,7 +60,7 @@ export function DeviceReservationSlotCreateDialog({
     },
     onSuccess: () => {
       setFormError(null);
-      void queryClient.invalidateQueries({ queryKey: ["device-reservations", deviceId] });
+      void queryClient.invalidateQueries({ queryKey: ["equipment-reservations", deviceId] });
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
       onOpenChange(false);
     },

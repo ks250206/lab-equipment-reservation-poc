@@ -70,7 +70,7 @@ export function ReservationDetailDialog({
       if (data.status === "cancelled") {
         toast("予約をキャンセルしました");
       }
-      void queryClient.invalidateQueries({ queryKey: ["device-reservations", deviceId] });
+      void queryClient.invalidateQueries({ queryKey: ["equipment-reservations", deviceId] });
       void queryClient.invalidateQueries({ queryKey: ["reservations"] });
       onOpenChange(false);
     },

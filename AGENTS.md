@@ -72,6 +72,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 25. discontinued・ステータスタグ・キャンセル表示・論理削除 | `it25-discontinued-status-tags-cancel` | 完了 |
 | 26. 予約一覧のキャンセル表示既定・トースト通知 | `it26-reservations-toast` | 完了 |
 | 27. README・doc と実装の整合 | `it27-docs-implementation-align` | 完了 |
+| 28. equipment-reservation への命名統一（Python・Keycloak・DB・Compose） | `it28-equipment-reservation-naming` | 完了 |
 
 ---
 

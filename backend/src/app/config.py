@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     """環境変数 ENVIRONMENT / APP_ENV で development | production を切替（既定: development）。"""
 
     database_url: str = (
-        "postgresql+asyncpg://dev_user:dev_password@localhost:5432/device_reservation"
+        "postgresql+asyncpg://dev_user:dev_password@localhost:5432/equipment_reservation"
     )
     environment: str = Field(
         default="development",
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     )
     keycloak_url: str = "http://localhost:8080"
     keycloak_realm: str = "master"
-    keycloak_client_id: str = "device-reservation"
+    keycloak_client_id: str = "equipment-reservation"
     # JWT realm_access.roles に含まれると API の管理者とみなすレルムロール名（Keycloak 側で付与）
     keycloak_app_admin_realm_role: str = Field(
         default="app-admin",
@@ -81,7 +81,7 @@ class Settings(BaseSettings):
         repr=False,
     )
     minio_bucket: str = Field(
-        default="device-images",
+        default="equipment-images",
         validation_alias=AliasChoices("MINIO_BUCKET", "S3_BUCKET"),
     )
     minio_region: str = Field(
@@ -90,7 +90,10 @@ class Settings(BaseSettings):
     )
     device_image_max_bytes: int = Field(
         default=2_097_152,
-        validation_alias=AliasChoices("DEVICE_IMAGE_MAX_BYTES"),
+        validation_alias=AliasChoices(
+            "EQUIPMENT_IMAGE_MAX_BYTES",
+            "DEVICE_IMAGE_MAX_BYTES",
+        ),
         description="装置画像 1 ファイルあたりの上限バイト数（既定 2MiB）",
     )
 

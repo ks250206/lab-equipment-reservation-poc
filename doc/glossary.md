@@ -49,5 +49,5 @@
 | 用語 | 定義 |
 |------|------|
 | Realm | Keycloak におけるテナント境界（PoC では `master` を既定とする） |
-| Client | Keycloak の OAuth クライアント（PoC では `device-reservation`） |
+| Client | Keycloak の OAuth クライアント（PoC では `equipment-reservation`） |
 | JWT | `Authorization: Bearer` で送るアクセストークン |

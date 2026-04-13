@@ -56,5 +56,6 @@
 | 25 | `iterations/it-25-discontinued-status-tags-cancel/` | discontinued・ステータスタグ・キャンセル表示・論理削除 |
 | 26 | `iterations/it-26-reservations-toast/` | 予約一覧のキャンセル表示既定・トースト通知 |
 | 27 | `iterations/it-27-docs-implementation-align/` | README・doc と実装の整合 |
+| 28 | `iterations/it-28-equipment-reservation-naming/` | equipment-reservation への命名統一（Python・Keycloak・DB・Compose） |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。

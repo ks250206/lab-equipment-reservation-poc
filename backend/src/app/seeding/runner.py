@@ -18,7 +18,7 @@ from .device_image_seed import seed_device_images_after_devices
 from .keycloak_seed import (
     ensure_keycloak_app_admin_realm_role,
     ensure_keycloak_dev_seed_users,
-    ensure_keycloak_device_reservation_client,
+    ensure_keycloak_equipment_reservation_client,
 )
 
 
@@ -95,7 +95,7 @@ async def _run_seed_and_keycloak() -> str:
     if not user_rows:
         raise RuntimeError(user_msg)
     await run_seed(user_rows=user_rows)
-    line1 = await ensure_keycloak_device_reservation_client(cfg)
+    line1 = await ensure_keycloak_equipment_reservation_client(cfg)
     line2 = await ensure_keycloak_app_admin_realm_role(cfg)
     return f"{user_msg}\n{line1}\n{line2}"
 
