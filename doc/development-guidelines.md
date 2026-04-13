@@ -30,6 +30,7 @@
 - **コミットメッセージ形式**: `{イテレーション番号}. {概要}`  
   例: `5. 予約APIの重複検証を追加`
 - **イテレーション番号・コミット目安・進捗表**: [AGENTS.md](../AGENTS.md) の「イテレーション一覧」を唯一の SSOT とする（ここには複製しない）。
+- **イテレーションと steering**: 着手順は下記「イテレーション開始時の steering」を必ず守る（[AGENTS.md](../AGENTS.md) 必須ルール 11 と同内容）。
 
 ## 5. リファクタリング基準
 
@@ -83,6 +84,21 @@ pnpm run test
 
 詳細は [README.md](../README.md) の起動方法を参照する。
 
+## 5.3 イテレーション開始時の steering（必須）
+
+新しいイテレーション **N** に入るとき（依頼のスコープが「次のイテレーション」に相当するとき）、**リポジトリへ最初の変更を加える前**に次を行う。エージェント・人間のどちらでも同様。
+
+1. **[AGENTS.md](../AGENTS.md)** の「イテレーション一覧」に行を追加する（コミット目安 `itN-...`、ステータスは **未着手** または **進行中** からでよい）。
+2. **`steering/iterations/it-NN-<slug>/` ディレクトリを新規作成**する。`NN` は 2 桁ゼロ埋め、`<slug>` は短い **kebab-case の英語**（例: `persistence-seed`）。既存イテレーションと重複しない名前にする。
+3. **次の 3 ファイルを必ず置く**（空の見出しだけでもよい。中身の言語・役割は [steering/README.md](../steering/README.md) に従う）:
+   - `implementation.md`（英語）
+   - `todo.md`（日本語可）
+   - `work_report.md`（日本語可）
+4. コピー用の見出し例は [steering/planning/iteration-starter.md](../steering/planning/iteration-starter.md) を参照する。
+5. **[steering/README.md](../steering/README.md)** の「インデックス（フォルダ名）」表に当該イテレーションの行を追加する。
+
+**禁止**: steering の 3 ファイルが無い状態でイテレーション N の実装コミットだけを先行させること（後追い作成のみにしない）。
+
 ## 6. フロントエンド仕様（実装時）
 
 - 日本語入力向け **デバウンス 300ms**。
@@ -108,6 +124,6 @@ pnpm run test
 - **API・データモデル・振る舞い**の変更 → `doc/functional-design.md`
 - **スタック・制約・NFR**の変更 → `doc/architecture.md`
 - **ディレクトリ規約**の変更 → `doc/repository-structure.md`
-- **開発ルール・Git・テスト**の変更 → 本ファイル
+- **開発ルール・Git・テスト・イテレーション着手（steering）**の変更 → 本ファイル（必要なら [steering/planning/iteration-starter.md](../steering/planning/iteration-starter.md) や [steering/README.md](../steering/README.md) も）
 - **用語**の変更 → `doc/glossary.md`
 - **エージェントの必須ルール**の変更、**イテレーション一覧の進捗**の更新 → `AGENTS.md` のみ（`doc/` に二重記載しない）

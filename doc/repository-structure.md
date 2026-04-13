@@ -40,7 +40,8 @@ personal_space/
 steering/
 ├── README.md                 # 運用ルール・インデックス
 ├── planning/
-│   └── initial-plan.md       # PoC 初期の全体メモ
+│   ├── initial-plan.md       # PoC 初期の全体メモ
+│   └── iteration-starter.md  # 新イテレーション用 3 ファイルのコピー用テンプレ
 └── iterations/
     └── it-NN-<slug>/         # 例: it-06-frontend
         ├── implementation.md # 実装内容（英語で記載する）

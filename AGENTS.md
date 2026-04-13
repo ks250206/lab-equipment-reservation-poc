@@ -33,6 +33,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 8. **本ファイル（AGENTS.md）の更新**: 「必須ルール」の追加・変更・削除、または「イテレーション一覧」のステータス／行の更新があったときに編集する。API・データモデル等の詳細仕様は `doc/` 側へ書き分ける。
 9. **イテレーションごとの品質ループ（必須）**: 各イテレーションの区切りごとに、触ったレイヤー（バックエンド／フロントエンドのいずれかまたは両方）について **format → lint → test** を**必ず**実行する（コマンド例は [@doc/development-guidelines.md](doc/development-guidelines.md) の「イテレーション完了時の品質チェック」）。いずれかが失敗したら修正し、**再度同じチェーンを回してすべて成功するまで繰り返す**。
 10. **リファクタリングのフィードバックループ（必須）**: 上記の結果や型チェック・レビューで示された問題（重複、責務の混在、ガイドライン違反など）を、[@doc/development-guidelines.md](doc/development-guidelines.md) のリファクタ基準とルール4（最小変更）の両方に従って改善する。改善後に**再度 format → lint → test** を実行し、グリーンを確認する。
+11. **イテレーション開始時の steering（必須）**: イテレーション N に着手するときは、**コード・設定・ドキュメントのいずれかを変えるより前**に、[@doc/development-guidelines.md](doc/development-guidelines.md) の「イテレーション開始時の steering」に従い、`steering/iterations/it-NN-<slug>/` に **`implementation.md` / `todo.md` / `work_report.md` の 3 ファイルを必ず作成**する（テンプレは [steering/planning/iteration-starter.md](steering/planning/iteration-starter.md)）。あわせて [AGENTS.md](AGENTS.md) のイテレーション一覧に行 N を追加し、[steering/README.md](steering/README.md) のインデックス表を更新する（未着手または進行中からでよい）。
 
 ---
 

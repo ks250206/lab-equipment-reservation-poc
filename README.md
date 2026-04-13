@@ -150,7 +150,7 @@ personal_space/
 ├── docker-compose.yml        # Postgres（共通）
 ├── docker-compose.dev.yml    # + Keycloak dev-file（開発既定）
 ├── docker-compose.prod.yml   # + Keycloak→Postgres keycloak DB（本番相当）
-├── steering/          # イテレーション作業（README と iterations/）
+├── steering/          # イテレーション作業（着手前に iterations/ を必ず作成。README 参照）
 ├── backend/           # FastAPI
 └── frontend/          # React
 ```

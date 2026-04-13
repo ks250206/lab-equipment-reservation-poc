@@ -9,7 +9,11 @@
 | [planning/initial-plan.md](planning/initial-plan.md) | PoC 全体の初期メモ（ロードマップの種） |
 | `iterations/it-NN-<slug>/` | 各イテレーションの作業単位（下記 3 ファイル） |
 
-`NN` は `AGENTS.md` のイテレーション一覧と同じ番号（例: 01–08）。`<slug>` は短い **kebab-case の英語**（例: `database-auth`）。
+`NN` は `AGENTS.md` のイテレーション一覧と同じ番号（2 桁ゼロ埋め）。`<slug>` は短い **kebab-case の英語**（例: `database-auth`）。
+
+## イテレーション着手順（必須）
+
+**実装・設定変更・恒久的 `doc/` 変更のいずれかを始める前に**、[@doc/development-guidelines.md](../doc/development-guidelines.md) の「5.3 イテレーション開始時の steering」に従い、当該 `it-NN-<slug>/` と 3 ファイルを用意する。テンプレは [planning/iteration-starter.md](planning/iteration-starter.md)。
 
 ## 各イテレーションで揃える 3 ファイル
 
@@ -19,7 +23,7 @@
 | `todo.md` | 日本語で可 | チェックリスト。**完了したら `[x]` に更新**する。 |
 | `work_report.md` | 日本語で可 | 作業セッションのメモ（判断・詰まり・次アクション）。長文不要。 |
 
-新しいイテレーションを始めるときは `iterations/it-NN-<slug>/` をコピーではなく新規作成し、上記 3 ファイルを空に近いテンプレから埋めていく。
+既存フォルダのコピーではなく **新規ディレクトリ**として `iterations/it-NN-<slug>/` を作り、上記 3 ファイルを置く（中身は着手後に追記でよいが、**フォルダと 3 ファイルの存在は着手前必須**）。
 
 ## インデックス（フォルダ名）
 
