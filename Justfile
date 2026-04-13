@@ -1,4 +1,4 @@
-# 室内装置予約 PoC — タスクランナー
+# 研究室装置予約 PoC — タスクランナー
 # `just` は flake の devShell に含める（`nix develop` 後に利用可能）。
 #
 # 依存コンテナ（PostgreSQL / Keycloak）: scripts/compose.sh（Podman 既定）

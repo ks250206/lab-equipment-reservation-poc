@@ -1,6 +1,6 @@
-# 室内装置予約システム PoC
+# 研究室装置予約システム PoC
 
-研究室内装置の予約・管理システム。
+研究室装置の予約・管理システム。
 
 **前提**: 開発・検証の標準手順は **Nix flake の devShell**（`nix develop`）と **ルートの [Justfile](Justfile)**（`just`）です。ツールチェーンは [flake.nix](flake.nix) に集約しています。
 

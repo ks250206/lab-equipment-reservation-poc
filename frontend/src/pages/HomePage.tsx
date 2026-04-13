@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 export function HomePage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">室内装置予約システム（PoC）</h1>
+      <h1 className="text-2xl font-semibold">研究室装置予約システム（PoC）</h1>
       <p className="max-w-2xl text-zinc-700">
         研究室の共有装置を検索し、ログイン後に時間帯を指定して予約できます。装置の閲覧はログインなしでも行えます。
       </p>

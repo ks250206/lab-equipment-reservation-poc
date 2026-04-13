@@ -1,7 +1,7 @@
 [project]
 name = "device-reservation"
 version = "0.1.0"
-description = "室内装置予約システム PoC"
+description = "研究室装置予約システム PoC"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.115.0",

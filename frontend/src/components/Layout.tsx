@@ -26,7 +26,7 @@ export function Layout() {
       ) : null}
       <header className="flex flex-wrap items-center gap-4 border-b border-zinc-200 bg-white px-4 py-3">
         <Link to="/" className="text-lg font-semibold tracking-tight">
-          室内装置予約
+          研究室装置予約
         </Link>
         <nav className="flex gap-4 text-sm">
           <Link to="/devices" className="text-blue-700 underline-offset-2 hover:underline">

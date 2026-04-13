@@ -1,5 +1,5 @@
 {
-  description = "室内装置予約システム PoC 開発環境";
+  description = "研究室装置予約システム PoC 開発環境";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
