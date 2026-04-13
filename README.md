@@ -80,7 +80,7 @@ API が **ポート 8000 使用中**で起動しない → `just backend-free-po
 ## ディレクトリ構成（抜粋）
 
 ```
-personal_space/
+lab-equipment-reservation-poc/
 ├── doc/                 # 設計・開発・本番運用ドキュメント
 ├── Justfile             # just（Nix devShell 内で利用）
 ├── flake.nix            # Nix 開発環境

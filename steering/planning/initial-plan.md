@@ -47,7 +47,7 @@
 ## リポジトリ（当時メモ）
 
 ```
-personal_space/
+lab-equipment-reservation-poc/
 ├── AGENTS.md
 ├── README.md
 ├── doc/

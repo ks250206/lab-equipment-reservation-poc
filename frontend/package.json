@@ -1,5 +1,5 @@
 {
-  "name": "device-reservation-frontend",
+  "name": "lab-equipment-reservation-poc-frontend",
   "version": "0.1.0",
   "private": true,
   "type": "module",

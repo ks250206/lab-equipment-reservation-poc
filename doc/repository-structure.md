@@ -7,7 +7,7 @@
 ## 1. リポジトリルート
 
 ```
-personal_space/
+lab-equipment-reservation-poc/
 ├── AGENTS.md              # エージェント必須ルール（短い）
 ├── README.md              # 人間向け: 概要・入口（詳細は doc/local-development.md）
 ├── doc/                   # 恒久的設計ドキュメント（@doc/ で参照）
