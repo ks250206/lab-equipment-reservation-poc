@@ -35,6 +35,15 @@ just frontend-dev    # http://localhost:5173
 
 `just backend-check` の `pytest` は **PostgreSQL が起動していること**（`just deps-up` 済み、`.env` の `DATABASE_URL` が妥当）を前提とする。
 
+#### ポート 8000 が「既に使用中」でバックエンドが起動しないとき
+
+別ターミナルの **取り残し `fastapi dev` / uvicorn** が `127.0.0.1:8000` を掴んでいることが多いです。
+
+1. **何が掴んでいるか確認**（macOS / Linux）: `lsof -nP -iTCP:8000 -sTCP:LISTEN`
+2. **終了**: 該当ターミナルで `Ctrl+C` を押すか、`just backend-free-port`（`8000` で LISTEN しているプロセスに `kill` を送る）
+3. **別ポートで起動**（フロントの Vite プロキシは既定 `8000` 向きなので、変える場合は `frontend/vite.config.ts` の `target` も合わせる）:  
+   `PORT=8001 just backend-dev` または `cd backend && PORT=8001 uv run fastapi dev`
+
 ### 手動での起動（just を使わない場合）
 
 #### 1. 依存サービス起動

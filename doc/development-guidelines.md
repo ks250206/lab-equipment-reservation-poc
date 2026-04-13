@@ -74,6 +74,7 @@ pnpm run test
 | 初回セットアップ | `just setup` |
 | バックエンド開発 | `just backend-dev` |
 | フロント開発 | `just frontend-dev` |
+| 8000 番ポートの解放（開発サーバの取り残し） | `just backend-free-port`（macOS / Linux、`lsof` 利用） |
 | バックエンド品質ループ | `just backend-check`（format → lint → test → ty）。`pytest` は DB 起動後（例: `just deps-up`）を前提 |
 | フロント品質ループ | `just frontend-check` |
 | 両方 | `just check` |

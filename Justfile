@@ -54,6 +54,25 @@ setup: setup-env backend-sync frontend-install
 	@echo "Setup done. Next: just deps-up  then  just backend-dev / just frontend-dev"
 
 # --- アプリ開発サーバ ---
+# ポート: FastAPI CLI は環境変数 PORT を参照（未設定時は 8000）。
+# 取り残しプロセスで 8000 が塞がる場合は `just backend-free-port` のあと再起動。
+
+[group('dev')]
+backend-free-port:
+	#!/usr/bin/env bash
+	pids="$(lsof -tiTCP:8000 -sTCP:LISTEN 2>/dev/null || true)"
+	if [[ -z "$pids" ]]; then
+	  echo "Port 8000: no LISTEN processes found."
+	  exit 0
+	fi
+	echo "Port 8000: stopping PIDs: $pids"
+	kill $pids 2>/dev/null || true
+	sleep 0.5
+	if lsof -tiTCP:8000 -sTCP:LISTEN >/dev/null 2>&1; then
+	  echo "Still busy; try: kill -9 $pids" >&2
+	  exit 1
+	fi
+	echo "Port 8000 is free."
 
 [group('dev')]
 backend-dev:
