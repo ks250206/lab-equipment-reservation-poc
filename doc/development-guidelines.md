@@ -71,18 +71,20 @@ pnpm run test
 |------|------------|
 | レシピ一覧 | `just --list` |
 | 依存サービス起動 / 停止 | `just deps-up` / `just deps-down`（**既定は Podman** / `podman-compose`） |
+| Keycloak 永続化の切替 | `.env` の `PERSISTENCE_PROFILE=development`（既定: dev-file＋`keycloak_dev_data` ボリューム）または `production`（`just deps-up-prod`: Postgres の `keycloak` DB）。切替前は down 推奨（[doc/local-development.md](local-development.md)） |
 | Docker のみ使う場合 | `export DEV_CONTAINER_RUNTIME=docker` のあと `just deps-up` 等 |
 | 初回セットアップ | `just setup` |
 | バックエンド開発 | `just backend-dev` |
 | フロント開発 | `just frontend-dev` |
 | 8000 番ポートの解放（開発サーバの取り残し） | `just backend-free-port`（macOS / Linux、`lsof` 利用） |
 | 開発シード（装置・ユーザー） | `just seed-dev`（`ENVIRONMENT=development` のみ） |
-| 本番相当 compose（Keycloak→Postgres） | `PERSISTENCE_PROFILE=production just deps-up` 等（[README.md](../README.md)） |
+| 本番相当 compose（Keycloak→Postgres） | `just deps-up-prod` / `just deps-down-prod` / `just deps-ps-prod` / `just deps-logs-prod`（[doc/local-development.md](local-development.md)） |
+| 本番モード API / フロントプレビュー | `just backend-run-prod` / `just frontend-build` のあと `just frontend-preview` |
 | バックエンド品質ループ | `just backend-check`（format → lint → test → ty）。`pytest` は DB 起動後（例: `just deps-up`）を前提 |
 | フロント品質ループ | `just frontend-check` |
 | 両方 | `just check` |
 
-詳細は [README.md](../README.md) の起動方法を参照する。
+詳細は [doc/local-development.md](local-development.md) を参照する。
 
 ## 5.3 イテレーション開始時の steering（必須）
 

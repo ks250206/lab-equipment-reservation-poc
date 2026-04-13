@@ -2,6 +2,8 @@ import { env } from "../env";
 
 import type { Device, FacetsResponse, Reservation, UserSelf } from "./types";
 
+export type UserUpdateBody = { name?: string | null; role?: string };
+
 function buildUrl(path: string, params?: Record<string, string | undefined>): string {
   const base = path.startsWith("http") ? path : `${env.apiBase}${path}`;
   if (!params) return base;
@@ -43,6 +45,29 @@ export async function fetchFacets(params: { q?: string }): Promise<FacetsRespons
 export async function fetchCurrentUser(token: string): Promise<UserSelf> {
   const res = await fetch(buildUrl("/users/me"), {
     headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseJson<UserSelf>(res);
+}
+
+export async function fetchUsersAdmin(token: string): Promise<UserSelf[]> {
+  const res = await fetch(buildUrl("/users"), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseJson<UserSelf[]>(res);
+}
+
+export async function updateUserAdmin(
+  token: string,
+  userId: string,
+  body: UserUpdateBody,
+): Promise<UserSelf> {
+  const res = await fetch(buildUrl(`/users/${userId}`), {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
   });
   return parseJson<UserSelf>(res);
 }

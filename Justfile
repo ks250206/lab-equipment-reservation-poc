@@ -4,6 +4,8 @@
 # 依存コンテナ（PostgreSQL / Keycloak）: scripts/compose.sh（Podman 既定）
 #   DEV_CONTAINER_RUNTIME=docker … Docker 系
 #   PERSISTENCE_PROFILE=development（既定）| production … compose 重ね合わせ
+#     development: Keycloak dev-file をボリューム keycloak_dev_data に永続化
+# 本番相当: `just deps-up-prod` 等（prod グループ）。アプリは ENVIRONMENT=production で起動。
 
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
@@ -13,15 +15,25 @@ root := justfile_directory()
 default:
 	@just --list
 
-# --- 依存サービス（docker-compose.yml） ---
+# --- 依存サービス（compose.yml） ---
 
 [group('deps')]
 deps-up:
 	bash "{{root}}/scripts/compose.sh" up -d
 
+# deps-down: 既定はコンテナのみ。永続削除は `just deps-down volumes`（compose down -v）
 [group('deps')]
-deps-down:
-	bash "{{root}}/scripts/compose.sh" down
+deps-down volumes="":
+	#!/usr/bin/env bash
+	args=(down)
+	if [[ -n "{{volumes}}" ]]; then
+	  if [[ "{{volumes}}" != "volumes" ]]; then
+	    echo "不明な引数: '{{volumes}}'（ボリューム削除は: just deps-down volumes）" >&2
+	    exit 1
+	  fi
+	  args+=(-v)
+	fi
+	bash "{{root}}/scripts/compose.sh" "${args[@]}"
 
 [group('deps')]
 deps-ps:
@@ -30,6 +42,42 @@ deps-ps:
 [group('deps')]
 deps-logs *args:
 	bash "{{root}}/scripts/compose.sh" logs {{args}}
+
+# --- 本番相当（compose: Keycloak→Postgres / アプリは本番モード） ---
+
+[group('prod')]
+deps-up-prod:
+	PERSISTENCE_PROFILE=production bash "{{root}}/scripts/compose.sh" up -d
+
+# deps-down-prod: 同上。ボリューム削除は `just deps-down-prod volumes`
+[group('prod')]
+deps-down-prod volumes="":
+	#!/usr/bin/env bash
+	args=(down)
+	if [[ -n "{{volumes}}" ]]; then
+	  if [[ "{{volumes}}" != "volumes" ]]; then
+	    echo "不明な引数: '{{volumes}}'（ボリューム削除は: just deps-down-prod volumes）" >&2
+	    exit 1
+	  fi
+	  args+=(-v)
+	fi
+	PERSISTENCE_PROFILE=production bash "{{root}}/scripts/compose.sh" "${args[@]}"
+
+[group('prod')]
+deps-ps-prod:
+	PERSISTENCE_PROFILE=production bash "{{root}}/scripts/compose.sh" ps
+
+[group('prod')]
+deps-logs-prod *args:
+	PERSISTENCE_PROFILE=production bash "{{root}}/scripts/compose.sh" logs {{args}}
+
+[group('prod')]
+backend-run-prod:
+	cd "{{root}}/backend" && ENVIRONMENT=production uv run fastapi run
+
+[group('prod')]
+frontend-preview:
+	cd "{{root}}/frontend" && pnpm run preview
 
 # --- 初回セットアップ ---
 
@@ -78,6 +126,7 @@ backend-free-port:
 backend-dev:
 	cd "{{root}}/backend" && uv run fastapi dev
 
+# PostgreSQL に users/devices を投入し、Keycloak が起動していれば Admin API で device-reservation クライアントを冪等更新
 [group('dev')]
 seed-dev:
 	cd "{{root}}/backend" && PYTHONPATH=src uv run python -m app.seeding

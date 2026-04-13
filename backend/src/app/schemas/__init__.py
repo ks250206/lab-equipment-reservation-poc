@@ -48,9 +48,12 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(UserBase):
+    """読み取り専用。DB 上の不正なメールでも 500 にしないため email は str に緩和する。"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    email: str
     keycloak_id: str
     role: str
     created_at: datetime

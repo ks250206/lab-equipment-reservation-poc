@@ -1,4 +1,5 @@
 # 本番相当（PoC）: Keycloak のメタデータを Postgres の keycloak DB に永続化
+# （postgres_data ボリューム内。コンテナ再起動後も保持）
 # 初回 postgres ボリューム作成時のみ docker/postgres/init が実行される（keycloak DB 作成）
 services:
   keycloak:

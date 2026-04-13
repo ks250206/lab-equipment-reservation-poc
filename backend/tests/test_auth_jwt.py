@@ -46,17 +46,20 @@ def _make_token(
     kid: str = "test-kid",
     aud: str | None = None,
     iss: str | None = None,
+    azp: str | None = None,
 ) -> str:
     now = int(datetime.now(UTC).timestamp())
     aud = aud if aud is not None else settings.keycloak_client_id
     iss = iss if iss is not None else f"{settings.keycloak_url}/realms/{settings.keycloak_realm}"
-    claims = {
+    claims: dict = {
         "sub": sub,
         "email": email,
         "aud": aud,
         "iss": iss,
         "exp": now + exp_offset_seconds,
     }
+    if azp is not None:
+        claims["azp"] = azp
     return jwt.encode(claims, pem, algorithm="RS256", headers={"kid": kid})
 
 
@@ -67,6 +70,15 @@ async def test_decode_token_success():
     payload = await decode_token(token, jwks=jwks)
     assert payload["sub"] == "kc-sub-1"
     assert payload["email"] == "jwt@test.com"
+
+
+@pytest.mark.asyncio
+async def test_decode_token_success_keycloak_style_aud_and_azp():
+    """Keycloak が `aud` に account のみを載せ `azp` にクライアント ID を載せる形式。"""
+    pem, jwks = _rsa_pem_and_jwks()
+    token = _make_token(pem, aud="account", azp=settings.keycloak_client_id)
+    payload = await decode_token(token, jwks=jwks)
+    assert payload["sub"] == "kc-sub-1"
 
 
 @pytest.mark.asyncio
@@ -101,10 +113,11 @@ async def test_decode_token_expired():
 @pytest.mark.asyncio
 async def test_decode_token_wrong_audience():
     pem, jwks = _rsa_pem_and_jwks()
-    token = _make_token(pem, aud="wrong-client")
+    token = _make_token(pem, aud="wrong-client", azp="wrong-client")
     with pytest.raises(HTTPException) as exc:
         await decode_token(token, jwks=jwks)
     assert exc.value.status_code == 401
+    assert "mismatch" in exc.value.detail.lower()
 
 
 @pytest.mark.asyncio

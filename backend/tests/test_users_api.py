@@ -124,3 +124,42 @@ async def test_list_users_forbidden_for_non_admin(users_regular_client):
     client, _session, _user = users_regular_client
     r = await client.get("/api/users")
     assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_put_user_admin_updates(users_admin_client):
+    client, session, _admin, other = users_admin_client
+    r = await client.put(
+        f"/api/users/{other.id}",
+        json={"name": "更新後の名前", "role": "admin"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["name"] == "更新後の名前"
+    assert body["role"] == "admin"
+
+    refreshed = await session.get(User, other.id)
+    assert refreshed is not None
+    assert refreshed.name == "更新後の名前"
+    assert refreshed.role.value == "admin"
+
+
+@pytest.mark.asyncio
+async def test_put_user_forbidden_for_non_admin(users_regular_client):
+    client, _session, user = users_regular_client
+    r = await client.put(f"/api/users/{user.id}", json={"name": "x"})
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_put_user_invalid_id(users_admin_client):
+    client, _session, _admin, _other = users_admin_client
+    r = await client.put("/api/users/not-uuid", json={"name": "x"})
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_put_user_missing(users_admin_client):
+    client, _session, _admin, _other = users_admin_client
+    r = await client.put(f"/api/users/{uuid.uuid4()}", json={"name": "x"})
+    assert r.status_code == 404

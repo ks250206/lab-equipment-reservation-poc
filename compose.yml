@@ -1,5 +1,5 @@
 # アプリ用 PostgreSQL（全プロファイル共通）
-# Keycloak は docker-compose.dev.yml / docker-compose.prod.yml で重ねる。
+# Keycloak は compose.dev.yml / compose.prod.yml で重ねる。
 # 切替: PERSISTENCE_PROFILE=development（既定）| production（scripts/compose.sh）
 
 services:

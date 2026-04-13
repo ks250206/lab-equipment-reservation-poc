@@ -7,12 +7,13 @@ import sys
 
 from sqlalchemy import delete, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from ..config import Settings
-from ..db import async_session_factory
+from ..db import async_session_factory, init_db
 from ..models import Device, Reservation, User
 from .dev_seed import DEVICE_ROWS, SEED_DEVICE_IDS, SEED_USER_IDS, SEED_USERS
+from .keycloak_seed import ensure_keycloak_device_reservation_client
 
 
 def ensure_development_for_seed() -> None:
@@ -29,6 +30,15 @@ async def run_seed(
 ) -> None:
     ensure_development_for_seed()
     factory = session_factory or async_session_factory
+    async with factory() as _bind_probe:
+        bind = _bind_probe.bind
+    if isinstance(bind, AsyncEngine):
+        await init_db(bind)
+    elif bind is None:
+        await init_db()
+    else:
+        msg = f"想定外の Session.bind 型です: {type(bind)!r}"
+        raise RuntimeError(msg)
     async with factory() as session:
         async with session.begin():
             await session.execute(
@@ -65,10 +75,16 @@ async def run_seed(
                 await session.execute(ins)
 
 
+async def _run_seed_and_keycloak() -> str:
+    await run_seed()
+    return await ensure_keycloak_device_reservation_client(Settings())
+
+
 def main() -> None:
     try:
-        asyncio.run(run_seed())
+        kc_line = asyncio.run(_run_seed_and_keycloak())
     except RuntimeError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
     print("開発シードを反映しました（users / devices）。")
+    print(kc_line)

@@ -21,6 +21,9 @@ build/
 node_modules/
 frontend/dist/
 
+# Cursor
+.cursor/
+
 # エディタ・OS
 .DS_Store
 .idea/

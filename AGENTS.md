@@ -17,6 +17,8 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 技術仕様・アーキテクチャ | `@doc/architecture.md` | [doc/architecture.md](doc/architecture.md) |
 | リポジトリ構造 | `@doc/repository-structure.md` | [doc/repository-structure.md](doc/repository-structure.md) |
 | 開発ガイドライン（テスト・Git・イテレーション等） | `@doc/development-guidelines.md` | [doc/development-guidelines.md](doc/development-guidelines.md) |
+| ローカル開発（Nix + just・Compose・シード） | `@doc/local-development.md` | [doc/local-development.md](doc/local-development.md) |
+| 本番運用の指針 | `@doc/production-operations.md` | [doc/production-operations.md](doc/production-operations.md) |
 | ユビキタス言語 | `@doc/glossary.md` | [doc/glossary.md](doc/glossary.md) |
 
 ---
@@ -29,7 +31,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 4. **変更範囲**: 依頼内容に必要な最小限の変更にとどめ、無関係なリファクタやファイル移動をしない。
 5. **一貫性**: 既存コードの import 形式・抽象度・コメント量に合わせる。新規だけ別スタイルにしない。
 6. **コミット**: イテレーション単位のまとまりができたらローカルコミットする。メッセージ形式は [@doc/development-guidelines.md](doc/development-guidelines.md) の Git 規約に従い、番号・コミット目安は下記「イテレーション一覧」と一致させる。
-7. **README 更新**: [README.md](README.md) は人間向けの入口である。**各イテレーション完了時**に内容を見直し、起動コマンド・サービス URL・ポート・依存サービス名・リポジトリ構成の説明など、利用者が最初の一歩で詰まりそうな点に変更があれば**必ず** README を更新する（変更がない場合はスキップでよいが、見直し自体は省かない）。
+7. **README / 入口ドキュメントの更新**: [README.md](README.md) は人間向けの**短い入口**（Nix + just のクイックスタートと `doc/` へのリンク）にとどめる。**各イテレーション完了時**に見直し、詳細な手順・URL 一覧・永続化の説明などは [doc/local-development.md](doc/local-development.md) や [doc/production-operations.md](doc/production-operations.md) へ寄せ、README は要約とリンクだけに保つ。README または入口ドキュメントに変更があれば**必ず**更新する（変更がない場合はスキップでよいが、見直し自体は省かない）。
 8. **本ファイル（AGENTS.md）の更新**: 「必須ルール」の追加・変更・削除、または「イテレーション一覧」のステータス／行の更新があったときに編集する。API・データモデル等の詳細仕様は `doc/` 側へ書き分ける。
 9. **イテレーションごとの品質ループ（必須）**: 各イテレーションの区切りごとに、触ったレイヤー（バックエンド／フロントエンドのいずれかまたは両方）について **format → lint → test** を**必ず**実行する（コマンド例は [@doc/development-guidelines.md](doc/development-guidelines.md) の「イテレーション完了時の品質チェック」）。いずれかが失敗したら修正し、**再度同じチェーンを回してすべて成功するまで繰り返す**。
 10. **リファクタリングのフィードバックループ（必須）**: 上記の結果や型チェック・レビューで示された問題（重複、責務の混在、ガイドライン違反など）を、[@doc/development-guidelines.md](doc/development-guidelines.md) のリファクタ基準とルール4（最小変更）の両方に従って改善する。改善後に**再度 format → lint → test** を実行し、グリーンを確認する。
@@ -52,6 +54,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 7. リファクタリング | `it7-refactor` | 完了 |
 | 8. タスクランナー（just） | `it8-just` | 完了 |
 | 9. 永続化プロファイル・開発シード | `it9-persistence-seed` | 完了 |
+| 10. Keycloak ロールベース認可（管理者の正） | `it10-keycloak-rbac` | 未着手 |
 
 ---
 

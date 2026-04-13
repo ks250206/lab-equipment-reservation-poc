@@ -1,14 +1,18 @@
 """Keycloak ペイロードからのユーザー解決（DB 実体）。"""
 
+from types import SimpleNamespace
+
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+import app.auth as auth_mod
 from app.auth import get_or_create_user_from_payload
-from app.config import settings
+from app.config import UserRole, settings
 from app.db import Base
 from app.models import User
+from app.schemas import UserResponse
 
 
 @pytest.fixture
@@ -59,3 +63,80 @@ async def test_get_or_create_rejects_missing_sub(session: AsyncSession):
     with pytest.raises(HTTPException) as exc:
         await get_or_create_user_from_payload(session, {"email": "x@test.com"})
     assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_coerces_invalid_email(session: AsyncSession):
+    user = await get_or_create_user_from_payload(
+        session,
+        {"sub": "kc-bad-email", "email": "not-an-email"},
+    )
+    assert user.email == "kc-bad-email@unknown.local"
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_bootstrap_admin_by_preferred_username(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(
+        auth_mod,
+        "settings",
+        SimpleNamespace(
+            keycloak_bootstrap_admin_usernames="alice,bob",
+            is_development=False,
+        ),
+    )
+    admin_user = await get_or_create_user_from_payload(
+        session,
+        {"sub": "kc-a1", "preferred_username": "alice", "email": "alice@example.com"},
+    )
+    assert admin_user.role == UserRole.ADMIN
+
+    plain = await get_or_create_user_from_payload(
+        session,
+        {"sub": "kc-u2", "preferred_username": "charlie", "email": "c@example.com"},
+    )
+    assert plain.role == UserRole.USER
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_dev_grants_admin_for_keycloak_admin_username(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+):
+    """development かつ env 未指定でも preferred_username=admin をアプリ admin にする。"""
+    monkeypatch.setattr(
+        auth_mod,
+        "settings",
+        SimpleNamespace(keycloak_bootstrap_admin_usernames="", is_development=True),
+    )
+    u = await get_or_create_user_from_payload(
+        session,
+        {"sub": "kc-dev-admin", "preferred_username": "admin", "email": "a@example.com"},
+    )
+    assert u.role == UserRole.ADMIN
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_production_no_default_admin_without_env(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(
+        auth_mod,
+        "settings",
+        SimpleNamespace(keycloak_bootstrap_admin_usernames="", is_development=False),
+    )
+    u = await get_or_create_user_from_payload(
+        session,
+        {"sub": "kc-prod", "preferred_username": "admin", "email": "a@example.com"},
+    )
+    assert u.role == UserRole.USER
+
+
+@pytest.mark.asyncio
+async def test_user_response_accepts_non_rfc_email_from_orm(session: AsyncSession):
+    u = User(keycloak_id="kc-x", email="admin", role=UserRole.USER)
+    session.add(u)
+    await session.commit()
+    await session.refresh(u)
+    body = UserResponse.model_validate(u)
+    assert body.email == "admin"

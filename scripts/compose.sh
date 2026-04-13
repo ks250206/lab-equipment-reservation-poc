@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# ルートの docker-compose を Podman または Docker で実行する。
+# ルートの Compose ファイル（compose.yml 系）を Podman または Docker で実行する。
 # 既定: Podman。永続プロファイル:
-#   PERSISTENCE_PROFILE=development（既定）→ docker-compose.yml + docker-compose.dev.yml
-#   PERSISTENCE_PROFILE=production          → docker-compose.yml + docker-compose.prod.yml
+#   PERSISTENCE_PROFILE=development（既定）→ compose.yml + compose.dev.yml
+#       Keycloak: dev-file + 名前付きボリューム keycloak_dev_data（コンテナ再起動でも保持）
+#   PERSISTENCE_PROFILE=production          → compose.yml + compose.prod.yml
+#       Keycloak: Postgres の keycloak DB（postgres_data ボリューム内）
 # Docker に切り替える場合は export DEV_CONTAINER_RUNTIME=docker
 set -euo pipefail
 
@@ -15,10 +17,10 @@ PROFILE="$(printf '%s' "$PROFILE_RAW" | tr '[:upper:]' '[:lower:]')"
 
 case "$PROFILE" in
   production | prod)
-    compose_files=( -f "$ROOT/docker-compose.yml" -f "$ROOT/docker-compose.prod.yml" )
+    compose_files=( -f "$ROOT/compose.yml" -f "$ROOT/compose.prod.yml" )
     ;;
   development | dev | *)
-    compose_files=( -f "$ROOT/docker-compose.yml" -f "$ROOT/docker-compose.dev.yml" )
+    compose_files=( -f "$ROOT/compose.yml" -f "$ROOT/compose.dev.yml" )
     ;;
 esac
 

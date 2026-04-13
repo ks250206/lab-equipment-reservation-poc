@@ -1,4 +1,5 @@
-# 開発: Keycloak は組み込み dev-file（アプリ DB の Postgres とは別層）
+# 開発: Keycloak は dev-file（H2）。名前付きボリュームでコンテナ再作成後もレルム等を保持。
+# 本番相当は compose.prod.yml（Postgres の keycloak DB）を参照。
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
@@ -10,6 +11,8 @@ services:
       KC_DB: dev-file
     ports:
       - "8080:8080"
+    volumes:
+      - keycloak_dev_data:/opt/keycloak/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -18,3 +21,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+volumes:
+  keycloak_dev_data:

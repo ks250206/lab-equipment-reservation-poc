@@ -13,6 +13,8 @@ import { initKeycloakClient, keycloak } from "./keycloak";
 type AuthContextValue = {
   ready: boolean;
   authenticated: boolean;
+  /** Keycloak 初期化失敗時のみ（ブラウザの開発者ツールのコンソールにも出る） */
+  initError: string | null;
   getValidToken: () => Promise<string | null>;
   login: () => void;
   logout: () => void;
@@ -23,6 +25,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,15 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((auth) => {
         if (cancelled) return;
         setAuthenticated(Boolean(auth));
+        setInitError(null);
         setReady(true);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[Keycloak init]", err);
         setAuthenticated(false);
+        setInitError(message);
         setReady(true);
       });
 
-    keycloak.onAuthSuccess = () => setAuthenticated(true);
+    keycloak.onAuthSuccess = () => {
+      setInitError(null);
+      setAuthenticated(true);
+    };
     keycloak.onAuthLogout = () => setAuthenticated(false);
     keycloak.onTokenExpired = () => {
       void keycloak.updateToken(30).catch(() => {
@@ -65,7 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(() => {
-    void keycloak.login();
+    void keycloak.login().catch((err: unknown) => {
+      console.error("[Keycloak login]", err);
+      setInitError(err instanceof Error ? err.message : String(err));
+    });
   }, []);
 
   const logout = useCallback(() => {
@@ -76,11 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       authenticated,
+      initError,
       getValidToken,
       login,
       logout,
     }),
-    [ready, authenticated, getValidToken, login, logout],
+    [ready, authenticated, initError, getValidToken, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

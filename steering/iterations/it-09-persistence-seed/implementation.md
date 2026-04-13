@@ -2,7 +2,7 @@
 
 ## Scope
 
-- **Compose split**: `docker-compose.yml` (Postgres + init) + `docker-compose.dev.yml` (Keycloak `KC_DB=dev-file`) + `docker-compose.prod.yml` (Keycloak `KC_DB=postgres` targeting DB `keycloak` on the shared Postgres service). `scripts/compose.sh` selects the pair via `PERSISTENCE_PROFILE` (`development` default, `production` for the JDBC stack).
+- **Compose split**: `compose.yml` (Postgres + init) + `compose.dev.yml` (Keycloak `KC_DB=dev-file`) + `compose.prod.yml` (Keycloak `KC_DB=postgres` targeting DB `keycloak` on the shared Postgres service). `scripts/compose.sh` selects the pair via `PERSISTENCE_PROFILE` (`development` default, `production` for the JDBC stack).
 - **Postgres init**: `docker/postgres/init/01-keycloak.sql` creates role/database for Keycloak (runs on first volume init only).
 - **App settings**: `ENVIRONMENT` / `APP_ENV` (`development` | `production`) with validation; `Settings()` reads `.env` from `backend/` or repo root (`env_file` tuple).
 - **Dev seed**: `app.seeding` module — idempotent PostgreSQL upserts for 33 devices (11 lab categories × 3) and 8 Japanese dummy users (one admin). Guarded when `ENVIRONMENT=production`. `run_seed(session_factory=...)` for tests.

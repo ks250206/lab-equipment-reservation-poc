@@ -19,6 +19,12 @@ export function HomePage() {
           </Link>{" "}
           <span className="text-zinc-600">（要ログイン）</span>
         </li>
+        <li>
+          <Link to="/admin/users" className="underline">
+            ユーザー管理（管理者）
+          </Link>{" "}
+          <span className="text-zinc-600">（アプリ DB の利用者・ロール。要 admin）</span>
+        </li>
       </ul>
     </div>
   );

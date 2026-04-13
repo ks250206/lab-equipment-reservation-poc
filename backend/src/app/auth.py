@@ -3,14 +3,27 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
+from pydantic import EmailStr, TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .config import settings
+from .config import Settings, UserRole, settings
 from .db import get_session
 from .models import User
 
 security = HTTPBearer()
+
+
+def _access_token_allows_client(payload: dict, client_id: str) -> bool:
+    """Keycloak の access token は aud が account、azp がクライアント ID であることが多い。"""
+    if payload.get("azp") == client_id:
+        return True
+    aud = payload.get("aud")
+    if aud == client_id:
+        return True
+    if isinstance(aud, list) and client_id in aud:
+        return True
+    return False
 
 
 async def get_jwt_public_keys() -> dict:
@@ -68,8 +81,8 @@ async def decode_token(token: str, jwks: dict | None = None) -> dict:
             token,
             rsa_key,
             algorithms=["RS256"],
-            audience=settings.keycloak_client_id,
             issuer=f"{settings.keycloak_url}/realms/{settings.keycloak_realm}",
+            options={"verify_aud": False},
         )
     except ExpiredSignatureError:
         raise HTTPException(
@@ -82,7 +95,49 @@ async def decode_token(token: str, jwks: dict | None = None) -> dict:
             detail=f"Invalid token: {str(e)}",
         )
 
+    if not _access_token_allows_client(payload, settings.keycloak_client_id):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Invalid token: client mismatch "
+                "(expected azp or aud to match API client id)"
+            ),
+        )
+
     return payload
+
+
+def _safe_email_for_user(raw: object, keycloak_id: str) -> str:
+    """JWT の email が欠落・非 RFC のときに DB とレスポンス検証を壊さない。"""
+    placeholder = f"{keycloak_id}@unknown.local"
+    if raw is None or not isinstance(raw, str):
+        return placeholder
+    s = raw.strip()
+    if not s:
+        return placeholder
+    try:
+        TypeAdapter(EmailStr).validate_python(s)
+        return s
+    except Exception:
+        return placeholder
+
+
+def _bootstrap_admin_preferred_usernames(cfg: Settings) -> set[str]:
+    """開発時は Keycloak 既定の管理者（preferred_username=admin）を常にアプリ admin に含める。"""
+    names: set[str] = set()
+    raw = (cfg.keycloak_bootstrap_admin_usernames or "").strip()
+    if raw:
+        names.update(x.strip() for x in raw.split(",") if x.strip())
+    if cfg.is_development:
+        names.add("admin")
+    return names
+
+
+def _initial_role_from_payload(payload: dict, cfg: Settings) -> UserRole:
+    pn = payload.get("preferred_username")
+    if isinstance(pn, str) and pn.strip() in _bootstrap_admin_preferred_usernames(cfg):
+        return UserRole.ADMIN
+    return UserRole.USER
 
 
 async def get_or_create_user_from_payload(session: AsyncSession, payload: dict) -> User:
@@ -93,7 +148,7 @@ async def get_or_create_user_from_payload(session: AsyncSession, payload: dict) 
             detail="Invalid token: missing subject",
         )
 
-    email = payload.get("email")
+    email = _safe_email_for_user(payload.get("email"), keycloak_id)
     name = payload.get("name")
 
     result = await session.execute(select(User).where(User.keycloak_id == keycloak_id))
@@ -102,9 +157,9 @@ async def get_or_create_user_from_payload(session: AsyncSession, payload: dict) 
     if user is None:
         user = User(
             keycloak_id=keycloak_id,
-            email=email or f"{keycloak_id}@unknown.local",
+            email=email,
             name=name,
-            role=settings.UserRole.USER,
+            role=_initial_role_from_payload(payload, settings),
         )
         session.add(user)
         await session.commit()

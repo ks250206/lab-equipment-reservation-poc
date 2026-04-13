@@ -1,156 +1,93 @@
 # 室内装置予約システム PoC
 
-研究室内装置の予約・管理システム
+研究室内装置の予約・管理システム。
+
+**前提**: 開発・検証の標準手順は **Nix flake の devShell**（`nix develop`）と **ルートの [Justfile](Justfile)**（`just`）です。ツールチェーンは [flake.nix](flake.nix) に集約しています。
 
 ## ドキュメント
 
 | 種別 | パス |
 |------|------|
 | AI 向け必須ルール | [AGENTS.md](AGENTS.md) |
-| 恒久的な設計・要求・開発手順 | [doc/](doc/)（例: `@doc/functional-design.md`） |
+| ローカル開発（Compose・シード・トラブルシュート） | [doc/local-development.md](doc/local-development.md) |
+| 本番運用の指針（環境変数・検証・注意点） | [doc/production-operations.md](doc/production-operations.md) |
+| Keycloak クライアント（手動・補足） | [doc/keycloak-setup.md](doc/keycloak-setup.md) |
+| 設計・アーキテクチャ等 | [doc/](doc/)（例: [doc/functional-design.md](doc/functional-design.md)） |
+| リポジトリ構成の詳細 | [doc/repository-structure.md](doc/repository-structure.md) |
 
-## 技術スタック
+## 技術スタック（概要）
 
 - **Backend**: Python 3.13, FastAPI, PostgreSQL, Keycloak (JWT)
 - **Frontend**: React 19, Vite, Tailwind, shadcn/ui
-- **Dev**: Nix (flake), pnpm, uv
+- **Dev**: Nix (flake), pnpm, uv, Podman（`just deps-*` 既定）または Docker
 
-## 起動方法
+## クイックスタート（最短）
 
-### クイックスタート（Nix + just）
-
-`just` は [flake.nix](flake.nix) の devShell で提供されます。
+リポジトリルートで:
 
 ```bash
-cd personal_space
-nix develop          # シェルに just / uv / Node 等が入る
-just setup           # .env の雛形、uv sync、pnpm install（初回・環境変化時）
-just deps-up         # Postgres + Keycloak（compose 重ね: 既定は開発プロファイル）
-# Docker の場合: export DEV_CONTAINER_RUNTIME=docker
-# Keycloak を Postgres 永続に: export PERSISTENCE_PROFILE=production（下記参照）
-just backend-dev     # 別ターミナル推奨
-just seed-dev        # 開発 DB に装置・ユーザー（ENVIRONMENT=development のみ）
-just frontend-dev    # http://localhost:5173
-```
-
-依存コンテナの停止: `just deps-down`。利用可能なレシピ一覧: `just` または `just --list`。
-
-`just backend-check` の `pytest` は **PostgreSQL が起動していること**（`just deps-up` 済み、`.env` の `DATABASE_URL` が妥当）を前提とする。
-
-#### ポート 8000 が「既に使用中」でバックエンドが起動しないとき
-
-別ターミナルの **取り残し `fastapi dev` / uvicorn** が `127.0.0.1:8000` を掴んでいることが多いです。
-
-1. **何が掴んでいるか確認**（macOS / Linux）: `lsof -nP -iTCP:8000 -sTCP:LISTEN`
-2. **終了**: 該当ターミナルで `Ctrl+C` を押すか、`just backend-free-port`（`8000` で LISTEN しているプロセスに `kill` を送る）
-3. **別ポートで起動**（フロントの Vite プロキシは既定 `8000` 向きなので、変える場合は `frontend/vite.config.ts` の `target` も合わせる）:  
-   `PORT=8001 just backend-dev` または `cd backend && PORT=8001 uv run fastapi dev`
-
-### 手動での起動（just を使わない場合）
-
-#### 1. 依存サービス起動
-
-```bash
-cd personal_space
-just deps-up
-# 手動の場合（開発プロファイル＝既定）:
-#   bash scripts/compose.sh up -d
-# Docker 利用時: export DEV_CONTAINER_RUNTIME=docker
-```
-
-#### 2. Nix 開発環境に入る
-
-```bash
-cd personal_space
 nix develop
+just setup
+just deps-up
+just seed-dev          # 任意: DB + Keycloak クライアントの開発用投入（ENVIRONMENT=development のみ）
 ```
 
-#### 3. バックエンド起動
+別ターミナル（どちらも `nix develop` 済みシェルで可）:
 
 ```bash
-cd backend
-uv sync
-uv run fastapi dev   # アプリ入口は backend/pyproject.toml の [tool.fastapi] entrypoint
+just backend-dev       # API: http://localhost:8000
+just frontend-dev      # UI: http://localhost:5173
 ```
 
-#### 4. フロントエンド起動
+- コンテナ停止: `just deps-down`
+- レシピ一覧: `just` または `just --list`
+- **Podman 以外**: 依存起動の**前**に `export DEV_CONTAINER_RUNTIME=docker`
 
-```bash
-cd frontend
-cp .env.example .env   # 初回のみ。Keycloak URL 等を必要に応じて編集
-pnpm install
-pnpm dev
-```
+詳細（本番相当スタック、永続化、`just` を使わない手順など）は **[doc/local-development.md](doc/local-development.md)** を参照。
 
-フロントは既定で `http://localhost:5173` を開き、`/api` は Vite のプロキシ経由で FastAPI（:8000）に転送されます。Keycloak でログインし、装置の閲覧・予約の作成ができます。
+## よく使う `just`
 
-## サービスURL
+| 用途 | コマンド |
+|------|----------|
+| 初回のツール・依存インストール | `just setup` |
+| Postgres + Keycloak（開発プロファイル） | `just deps-up` / `just deps-down` |
+| Postgres + Keycloak（本番相当・ローカル検証） | `just deps-up-prod` / `just deps-down-prod` |
+| API / フロント開発サーバ | `just backend-dev` / `just frontend-dev` |
+| 開発シード（DB + Keycloak API 可ならクライアント） | `just seed-dev` |
+| 本番モード API / フロント静的プレビュー | `just backend-run-prod` / `just frontend-build` → `just frontend-preview` |
+| Lint / テスト一式 | `just check` |
 
-| サービス | URL |
-|---------|-----|
-| FastAPI | http://localhost:8000 |
-| OpenAPI (Swagger UI) | http://localhost:8000/docs |
-| Vite | http://localhost:5173 |
-| Keycloak | http://localhost:8080 |
-| PostgreSQL | localhost:5432 |
+## 本番運用
 
-## 初期設定 (Keycloak)
-
-1. Keycloak 管理画面: http://localhost:8080 (admin/admin)
-2. Realm: master (デフォルト)
-3. Client 作成（ブラウザ SPA 用）:
-   - Client ID: `device-reservation`
-   - Client authentication: **Off**（パブリッククライアント）
-   - Standard flow を有効化
-   - Valid Redirect URIs: `http://localhost:5173/*`
-   - Web Origins: `http://localhost:5173`
+クラウドへの具体的なデプロイ YAML はリポジトリ外とし、**揃える環境変数・TLS・Keycloak・DB バックアップ・デプロイ後チェック**を **[doc/production-operations.md](doc/production-operations.md)** に整理しています。
 
 ## 環境変数
 
 | 場所 | 用途 |
 |------|------|
-| リポジトリルートの `.env.example` | バックエンド（`DATABASE_URL` 等） |
-| `frontend/.env.example` | フロント（`VITE_KEYCLOAK_*` 等） |
+| [.env.example](.env.example) | バックエンド・Compose 切替（`PERSISTENCE_PROFILE` 等） |
+| [frontend/.env.example](frontend/.env.example) | フロント（`VITE_KEYCLOAK_*` 等） |
 
 ```bash
 cp .env.example .env
 cp frontend/.env.example frontend/.env
 ```
 
-## 永続化プロファイル（アプリ DB と Keycloak）
+## トラブル（一例）
 
-| レイヤー | 開発（既定） | 本番相当（`PERSISTENCE_PROFILE=production`） |
-|----------|--------------|-----------------------------------------------|
-| **アプリ DB**（装置・予約・`users` テーブル） | `DATABASE_URL` の Postgres（`docker-compose.yml` の `postgres`） | **同じく**接続先 URL を環境ごとに変える（クラウド RDS 等も可） |
-| **Keycloak**（レルム・クライアント・ログインユーザ） | `KC_DB=dev-file`（コンテナ内。アプリ用 Postgres とは**別**） | `KC_DB=postgres` で **同一 Postgres サーバ上の `keycloak` DB** に保存（`docker/postgres/init/01-keycloak.sql` で DB 作成。初回ボリューム作成時のみ実行） |
+API が **ポート 8000 使用中**で起動しない → `just backend-free-port` または [doc/local-development.md](doc/local-development.md) の「ポート 8000」節。
 
-- Keycloak は **アプリ DB とは独立**したストアですが、`production` プロファイルでは **Postgres に JDBC 接続**します（「DB 依存」と言えるのはこの意味）。
-- 既存の Postgres ボリュームを流用しつつ **初めて production プロファイルにする**場合、`keycloak` ロール／DB が無いと Keycloak が起動に失敗します。そのときは DB に手動で `01-keycloak.sql` と同等の SQL を流すか、**開発用データ消去可なら** Postgres ボリュームを作り直してください。
-
-### 開発シード（装置・ユーザー）
-
-`ENVIRONMENT=development` のときのみ、`just seed-dev`（内部は `python -m app.seeding`）で以下を **冪等 upsert** します。
-
-- **装置** 11 カテゴリ（XRD, XRF, XPS, 充放電装置, TG-DTA, グローブボックス, SEM, 3Dプリンタ, 蒸着装置, スパッタ装置, イオンミリング装置）× 3 台＝33 件（場所・ステータスにバリエーション）
-- **ユーザー** 8 名（日本人名のダミー。1 名は管理者ロール。`keycloak_id` は `seed-...` 接頭辞）
-
-本番（`ENVIRONMENT=production`）ではシードは拒否されます。
-
-## ディレクトリ構成
+## ディレクトリ構成（抜粋）
 
 ```
 personal_space/
-├── AGENTS.md          # AI 向け必須ルール
-├── doc/               # 恒久的ドキュメント（要求・設計・アーキテクチャ等）
-├── README.md          # このファイル
-├── Justfile           # just タスクランナー（起動・品質チェック）
-├── scripts/           # compose.sh（Podman/Docker・永続プロファイル）
-├── docker/            # Postgres init SQL 等
-├── flake.nix          # Nix 環境定義（just / uv / podman-compose 等）
-├── docker-compose.yml        # Postgres（共通）
-├── docker-compose.dev.yml    # + Keycloak dev-file（開発既定）
-├── docker-compose.prod.yml   # + Keycloak→Postgres keycloak DB（本番相当）
-├── steering/          # イテレーション作業（着手前に iterations/ を必ず作成。README 参照）
-├── backend/           # FastAPI
-└── frontend/          # React
+├── doc/                 # 設計・開発・本番運用ドキュメント
+├── Justfile             # just（Nix devShell 内で利用）
+├── flake.nix            # Nix 開発環境
+├── compose.yml          # Postgres（共通）
+├── compose.dev.yml      # + Keycloak 開発
+├── compose.prod.yml     # + Keycloak 本番相当（Postgres JDBC）
+├── scripts/compose.sh   # Podman/Docker + プロファイル選択
+├── backend/             # FastAPI
+└── frontend/            # React + Vite
 ```

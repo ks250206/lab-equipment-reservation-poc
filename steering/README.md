@@ -38,5 +38,6 @@
 | 7 | `iterations/it-07-refactor/` | リファクタリング |
 | 8 | `iterations/it-08-just-runner/` | タスクランナー（just） |
 | 9 | `iterations/it-09-persistence-seed/` | 永続化プロファイル・開発シード |
+| 10 | `iterations/it-10-keycloak-rbac-roles/` | Keycloak ロールベース認可（管理者の正） |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。

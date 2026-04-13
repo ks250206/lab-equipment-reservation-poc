@@ -1,6 +1,11 @@
 from collections.abc import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from .config import settings
@@ -28,6 +33,10 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
         yield session
 
 
-async def init_db() -> None:
-    async with engine.begin() as conn:
+async def init_db(bind: AsyncEngine | None = None) -> None:
+    """メタデータに基づき不足テーブルを作成する。モデルは import 順に依存しない。"""
+    from .models import Device, Reservation, User  # noqa: F401
+
+    target = bind or engine
+    async with target.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -9,7 +9,7 @@
 ```
 personal_space/
 ├── AGENTS.md              # エージェント必須ルール（短い）
-├── README.md              # 人間向け: 概要・起動手順
+├── README.md              # 人間向け: 概要・入口（詳細は doc/local-development.md）
 ├── doc/                   # 恒久的設計ドキュメント（@doc/ で参照）
 ├── flake.nix
 ├── Justfile               # just: 依存起動・dev サーバ・品質チェック
@@ -17,13 +17,16 @@ personal_space/
 ├── docker/                # Postgres init（keycloak DB 等）
 ├── .env                   # gitignore（ローカル秘密）
 ├── .env.example
-├── docker-compose.yml
-├── docker-compose.dev.yml
-├── docker-compose.prod.yml
+├── compose.yml
+├── compose.dev.yml
+├── compose.prod.yml
 ├── steering/              # イテレーション作業（iterations/ 参照。設計SSOTではない）
 ├── backend/               # FastAPI
 └── frontend/              # React + Vite
 ```
+
+- `compose.dev.yml`: Keycloak は **dev-file**（H2）を **名前付きボリューム `keycloak_dev_data`** に保存し、コンテナ再作成でもレルム等を保持する。
+- `compose.prod.yml`: Keycloak は **Postgres の `keycloak` DB**（`compose.yml` の `postgres_data`）に JDBC 接続する本番相当スタック。
 
 ## 2. ドキュメントの役割
 
@@ -31,7 +34,9 @@ personal_space/
 |------|------|
 | `AGENTS.md` | AI が**必ず守る**ルールのみ |
 | `doc/*.md` | 要求・機能設計・アーキテクチャ等の**恒久的**な詳細 |
-| `README.md` | クローン直後の人間向けクイックスタート |
+| `README.md` | クローン直後の人間向けクイックスタート（Nix + just 前提の入口） |
+| [doc/local-development.md](local-development.md) | ローカル開発の詳細（Compose プロファイル、シード、トラブルシュート） |
+| [doc/production-operations.md](production-operations.md) | 本番運用の指針（環境変数、検証チェックリスト） |
 | `steering/` | イテレーション単位の TODO・実装メモ・作業報告（[steering/README.md](../steering/README.md)） |
 
 ### 2.1 `steering/` の中身
