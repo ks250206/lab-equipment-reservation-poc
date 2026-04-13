@@ -59,6 +59,9 @@ exclude_lines = [
 
 [tool.ty]
 
+[tool.fastapi]
+entrypoint = "app.main:app"
+
 [dependency-groups]
 dev = [
     "ty>=0.0.29",

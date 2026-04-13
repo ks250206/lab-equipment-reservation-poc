@@ -58,7 +58,7 @@ nix develop
 ```bash
 cd backend
 uv sync
-uv run fastapi dev
+uv run fastapi dev   # アプリ入口は backend/pyproject.toml の [tool.fastapi] entrypoint
 ```
 
 #### 4. フロントエンド起動
