@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Device
 from ..schemas import DeviceCreate, DeviceUpdate
+from ..storage.s3_device_images import delete_device_image_object
 
 
 async def create_device(
@@ -53,5 +54,6 @@ async def delete_device(
     session: AsyncSession,
     device: Device,
 ) -> None:
+    delete_device_image_object(object_key=device.image_object_key)
     await session.delete(device)
     await session.commit()

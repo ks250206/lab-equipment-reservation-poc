@@ -1,14 +1,16 @@
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 from enum import IntEnum
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import Response
 
 from ..auth import get_current_user, require_admin
-from ..config import DeviceStatus
+from ..config import DeviceStatus, get_settings
 from ..db import get_session
-from ..models import Device, Reservation, User
+from ..models import Reservation, User
 from ..schemas import (
     DeviceCreate,
     DeviceResponse,
@@ -16,6 +18,7 @@ from ..schemas import (
     PaginatedDeviceListResponse,
     PaginatedReservationListResponse,
     ReservationResponse,
+    device_to_response,
 )
 from ..services import (
     create_device as create_device_service,
@@ -33,7 +36,13 @@ from ..services import (
 from ..services import (
     update_device as update_device_service,
 )
+from ..services.device_image_bytes import validate_device_image_bytes
 from ..services.reservations import list_reservations_for_device_in_window_paginated
+from ..storage.s3_device_images import (
+    delete_device_image_object,
+    get_device_image_bytes,
+    put_device_image_object,
+)
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
 
@@ -99,7 +108,7 @@ async def list_devices(
         page_size=int(page_size),
     )
     return PaginatedDeviceListResponse(
-        items=[DeviceResponse.model_validate(d) for d in items],
+        items=[device_to_response(d) for d in items],
         total=total,
         page=page,
         page_size=int(page_size),
@@ -178,11 +187,116 @@ async def list_device_reservations(
     )
 
 
+@router.get("/{device_id}/image")
+async def stream_device_image(
+    device_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> Response:
+    try:
+        uuid_obj = uuid.UUID(device_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid device ID format",
+        ) from None
+
+    device = await get_device_service(session, uuid_obj)
+    if device is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found",
+        )
+    if not device.image_object_key:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device has no image",
+        )
+    try:
+        body, content_type = await asyncio.to_thread(
+            get_device_image_bytes,
+            object_key=device.image_object_key,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to read image: {e!s}",
+        ) from e
+    return Response(content=body, media_type=content_type)
+
+
+@router.post("/{device_id}/image", response_model=DeviceResponse)
+async def upload_device_image(
+    device_id: str,
+    session: AsyncSession = Depends(get_session),
+    admin: User = Depends(require_admin),
+    file: UploadFile = File(..., description="PNG または JPEG"),
+) -> DeviceResponse:
+    _ = admin
+    try:
+        uuid_obj = uuid.UUID(device_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid device ID format",
+        ) from None
+
+    device = await get_device_service(session, uuid_obj)
+    if device is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found",
+        )
+
+    max_b = get_settings().device_image_max_bytes
+    parts: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(65_536)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_b:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"画像サイズが上限（{max_b} バイト）を超えています",
+            )
+        parts.append(chunk)
+    raw = b"".join(parts)
+    try:
+        content_type = validate_device_image_bytes(raw)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+    old_key = device.image_object_key
+    try:
+        new_key = await asyncio.to_thread(
+            put_device_image_object,
+            device_id=device.id,
+            body=raw,
+            content_type=content_type,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to store image: {e!s}",
+        ) from e
+
+    await asyncio.to_thread(delete_device_image_object, object_key=old_key)
+    device.image_object_key = new_key
+    device.image_content_type = content_type
+    await session.commit()
+    await session.refresh(device)
+    return device_to_response(device)
+
+
 @router.get("/{device_id}", response_model=DeviceResponse)
 async def get_device(
     device_id: str,
     session: AsyncSession = Depends(get_session),
-) -> Device:
+) -> DeviceResponse:
     try:
         uuid_obj = uuid.UUID(device_id)
     except ValueError:
@@ -197,7 +311,7 @@ async def get_device(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Device not found",
         )
-    return device
+    return device_to_response(device)
 
 
 @router.post("", response_model=DeviceResponse)
@@ -205,9 +319,10 @@ async def create_device(
     device_data: DeviceCreate,
     session: AsyncSession = Depends(get_session),
     admin: User = Depends(require_admin),
-) -> Device:
+) -> DeviceResponse:
     _ = admin
-    return await create_device_service(session, device_data)
+    created = await create_device_service(session, device_data)
+    return device_to_response(created)
 
 
 @router.put("/{device_id}", response_model=DeviceResponse)
@@ -216,7 +331,7 @@ async def update_device(
     device_data: DeviceUpdate,
     session: AsyncSession = Depends(get_session),
     admin: User = Depends(require_admin),
-) -> Device:
+) -> DeviceResponse:
     _ = admin
     try:
         uuid_obj = uuid.UUID(device_id)
@@ -232,7 +347,8 @@ async def update_device(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Device not found",
         )
-    return await update_device_service(session, device, device_data)
+    updated = await update_device_service(session, device, device_data)
+    return device_to_response(updated)
 
 
 @router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)

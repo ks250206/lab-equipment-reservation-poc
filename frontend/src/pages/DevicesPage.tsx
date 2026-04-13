@@ -3,10 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { fetchDevices, fetchFacets } from "@/api/client";
-import type { PageSize } from "@/api/types";
+import type { Device, PageSize } from "@/api/types";
+import { DeviceImageSlot } from "@/components/device/DeviceImageSlot";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { localDatetimeInputToIso } from "@/lib/datetimeLocal";
+
+type DeviceListViewMode = "list" | "detail" | "thumbnail";
 
 export function DevicesPage() {
   const locationRoute = useLocation();
@@ -21,6 +24,7 @@ export function DevicesPage() {
   const [reservationTo, setReservationTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
+  const [listView, setListView] = useState<DeviceListViewMode>("thumbnail");
 
   const debouncedQuery = useDebouncedValue(rawQuery, composition);
   const debouncedReservationUser = useDebouncedValue(rawReservationUser, resUserComposition);
@@ -112,9 +116,118 @@ export function DevicesPage() {
   );
   const statusOptions = useMemo(() => facetQuery.data?.status ?? [], [facetQuery.data?.status]);
 
+  const renderDeviceList = (items: Device[]) => {
+    if (listView === "list") {
+      return (
+        <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white shadow-sm">
+          {items.map((d) => (
+            <li key={d.id} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
+              <div>
+                <Link to={`/devices/${d.id}`} className="font-medium text-blue-800 hover:underline">
+                  {d.name}
+                </Link>
+                <p className="text-xs text-zinc-500">
+                  {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    if (listView === "detail") {
+      return (
+        <ul className="space-y-4">
+          {items.map((d) => (
+            <li
+              key={d.id}
+              className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm"
+            >
+              <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch">
+                <DeviceImageSlot
+                  deviceId={d.id}
+                  hasImage={d.has_image ?? false}
+                  cacheBust={d.updated_at}
+                  className="h-36 w-full shrink-0 sm:h-auto sm:w-44"
+                />
+                <div className="min-w-0 flex-1 space-y-2 text-sm">
+                  <Link
+                    to={`/devices/${d.id}`}
+                    className="text-lg font-medium text-blue-800 hover:underline"
+                  >
+                    {d.name}
+                  </Link>
+                  <p className="text-xs text-zinc-500">
+                    {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
+                  </p>
+                  <p className="line-clamp-4 text-zinc-700">{d.description?.trim() || "—"}</p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {items.map((d) => (
+          <li
+            key={d.id}
+            className="flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm"
+          >
+            <DeviceImageSlot
+              deviceId={d.id}
+              hasImage={d.has_image ?? false}
+              cacheBust={d.updated_at}
+              className="aspect-[4/3] w-full"
+            />
+            <div className="space-y-1 p-3">
+              <Link
+                to={`/devices/${d.id}`}
+                className="line-clamp-2 font-medium text-blue-800 hover:underline"
+              >
+                {d.name}
+              </Link>
+              <p className="line-clamp-2 text-xs text-zinc-500">
+                {d.category ?? "—"} / {d.location ?? "—"}
+              </p>
+              <p className="text-xs text-zinc-600">{d.status}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">装置一覧</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold">装置一覧</h1>
+        <div className="flex flex-wrap gap-1">
+          {(
+            [
+              ["thumbnail", "サムネ"],
+              ["list", "リスト"],
+              ["detail", "詳細"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setListView(mode)}
+              className={
+                listView === mode
+                  ? "rounded border border-zinc-800 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white"
+                  : "rounded border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm md:grid-cols-2">
         <label className="block space-y-1 md:col-span-2">
@@ -242,27 +355,13 @@ export function DevicesPage() {
               onPageSizeChange={setPageSize}
             />
           ) : null}
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white shadow-sm">
-            {deviceQuery.data?.total === 0 ? (
-              <li className="p-4 text-sm text-zinc-600">該当する装置がありません。</li>
-            ) : (
-              deviceQuery.data?.items.map((d) => (
-                <li key={d.id} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
-                  <div>
-                    <Link
-                      to={`/devices/${d.id}`}
-                      className="font-medium text-blue-800 hover:underline"
-                    >
-                      {d.name}
-                    </Link>
-                    <p className="text-xs text-zinc-500">
-                      {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
-                    </p>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
+          {deviceQuery.data?.total === 0 ? (
+            <p className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm">
+              該当する装置がありません。
+            </p>
+          ) : deviceQuery.data?.items ? (
+            renderDeviceList(deviceQuery.data.items)
+          ) : null}
         </div>
       )}
     </div>

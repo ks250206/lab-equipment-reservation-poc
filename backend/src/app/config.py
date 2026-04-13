@@ -65,6 +65,34 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
 
+    # MinIO / S3 互換（装置画像）。未起動時はアップロード・シード画像がスキップされる。
+    minio_endpoint_url: str = Field(
+        default="http://localhost:9000",
+        validation_alias=AliasChoices("MINIO_ENDPOINT_URL", "S3_ENDPOINT_URL"),
+    )
+    minio_access_key: str = Field(
+        default="minioadmin",
+        validation_alias=AliasChoices("MINIO_ACCESS_KEY", "AWS_ACCESS_KEY_ID"),
+    )
+    minio_secret_key: str = Field(
+        default="minioadmin",
+        validation_alias=AliasChoices("MINIO_SECRET_KEY", "AWS_SECRET_ACCESS_KEY"),
+        repr=False,
+    )
+    minio_bucket: str = Field(
+        default="device-images",
+        validation_alias=AliasChoices("MINIO_BUCKET", "S3_BUCKET"),
+    )
+    minio_region: str = Field(
+        default="us-east-1",
+        validation_alias=AliasChoices("MINIO_REGION", "AWS_DEFAULT_REGION"),
+    )
+    device_image_max_bytes: int = Field(
+        default=2_097_152,
+        validation_alias=AliasChoices("DEVICE_IMAGE_MAX_BYTES"),
+        description="装置画像 1 ファイルあたりの上限バイト数（既定 2MiB）",
+    )
+
     @field_validator("environment", mode="before")
     @classmethod
     def normalize_environment(cls, v: object) -> str:

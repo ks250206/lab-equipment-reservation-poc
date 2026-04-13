@@ -30,6 +30,28 @@ class DeviceResponse(DeviceBase):
     status: str
     created_at: datetime
     updated_at: datetime
+    has_image: bool = False
+
+
+def device_to_response(device: object) -> DeviceResponse:
+    """ORM `Device` から `has_image` を埋めてレスポンスを組み立てる。"""
+    from ..models import Device as DeviceModel
+
+    if not isinstance(device, DeviceModel):
+        msg = f"Device 以外は渡せません: {type(device)!r}"
+        raise TypeError(msg)
+    status_val = device.status.value if hasattr(device.status, "value") else str(device.status)
+    return DeviceResponse(
+        id=device.id,
+        name=device.name,
+        description=device.description,
+        location=device.location,
+        category=device.category,
+        status=status_val,
+        created_at=device.created_at,
+        updated_at=device.updated_at,
+        has_image=device.image_object_key is not None,
+    )
 
 
 class PaginatedDeviceListResponse(BaseModel):

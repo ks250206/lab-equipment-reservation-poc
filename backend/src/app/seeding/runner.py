@@ -14,6 +14,7 @@ from ..config import Settings
 from ..db import async_session_factory, init_db
 from ..models import Device, Reservation, User
 from .dev_seed import DEVICE_ROWS, SEED_DEVICE_IDS, SEED_USER_IDS, build_reservation_seed_rows
+from .device_image_seed import seed_device_images_after_devices
 from .keycloak_seed import (
     ensure_keycloak_app_admin_realm_role,
     ensure_keycloak_dev_seed_users,
@@ -84,6 +85,8 @@ async def run_seed(
             for i in range(0, len(res_rows), 400):
                 chunk = res_rows[i : i + 400]
                 session.add_all([Reservation(**row) for row in chunk])
+
+    await seed_device_images_after_devices(factory)
 
 
 async def _run_seed_and_keycloak() -> str:

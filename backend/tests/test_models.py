@@ -118,6 +118,7 @@ class TestResponseSchemas:
         assert "id" in fields
         assert "status" in fields
         assert "created_at" in fields
+        assert "has_image" in fields
 
     def test_user_response_has_id(self):
         from app.schemas import UserResponse

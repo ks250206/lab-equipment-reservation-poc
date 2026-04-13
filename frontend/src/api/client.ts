@@ -59,6 +59,21 @@ export async function fetchDevice(deviceId: string): Promise<Device> {
   return parseJson<Device>(res);
 }
 
+export async function uploadDeviceImage(
+  token: string,
+  deviceId: string,
+  file: File,
+): Promise<Device> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(buildUrl(`/devices/${deviceId}/image`), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  return parseJson<Device>(res);
+}
+
 export async function fetchFacets(params: { q?: string }): Promise<FacetsResponse> {
   const res = await fetch(buildUrl("/devices/facets", params));
   return parseJson<FacetsResponse>(res);

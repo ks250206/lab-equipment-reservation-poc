@@ -44,5 +44,7 @@ async def init_db(bind: AsyncEngine | None = None) -> None:
         for stmt in (
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255)",
+            "ALTER TABLE devices ADD COLUMN IF NOT EXISTS image_object_key VARCHAR(512)",
+            "ALTER TABLE devices ADD COLUMN IF NOT EXISTS image_content_type VARCHAR(64)",
         ):
             await conn.execute(text(stmt))

@@ -63,6 +63,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 16. リスト上ページネーション・カレンダー（時刻+氏名・月省略）・予約詳細モーダル | `it16-reservation-calendar-modal` | 完了 |
 | 17. 装置カレンダーのドラッグで予約作成 | `it17-device-calendar-drag-reservation` | 完了 |
 | 18. 装置一覧の予約フィルター（ユーザー名・期間）とパンくず・カテゴリ／場所リンク | `it18-device-list-filters-breadcrumb` | 完了 |
+| 19. 装置写真（MinIO・PNG/JPEG 検証）と一覧表示モード | `it19-device-images-minio` | 完了 |
 
 ---
 
