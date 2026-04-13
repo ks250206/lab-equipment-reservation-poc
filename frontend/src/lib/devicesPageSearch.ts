@@ -7,9 +7,8 @@ export type DevicesPageSearchState = {
   category: string;
   location: string;
   status: string;
-  reservation_user: string;
-  reservation_from: string;
-  reservation_to: string;
+  used_by_me: boolean;
+  favorites_only: boolean;
   page: number;
   page_size: PageSize;
   view: DeviceListViewMode;
@@ -34,9 +33,8 @@ export function parseDevicesPageSearch(search: string): DevicesPageSearchState {
     category: sp.get("category") ?? "",
     location: sp.get("location") ?? "",
     status: sp.get("status") ?? "",
-    reservation_user: sp.get("reservation_user") ?? "",
-    reservation_from: sp.get("reservation_from") ?? "",
-    reservation_to: sp.get("reservation_to") ?? "",
+    used_by_me: sp.get("used_by_me") === "1",
+    favorites_only: sp.get("favorites_only") === "1",
     page,
     page_size,
     view,
@@ -48,9 +46,8 @@ export function serializeDevicesPageSearch(args: {
   category: string;
   location: string;
   status: string;
-  reservation_user: string;
-  reservation_from: string;
-  reservation_to: string;
+  used_by_me: boolean;
+  favorites_only: boolean;
   page: number;
   page_size: PageSize;
   view: DeviceListViewMode;
@@ -61,10 +58,8 @@ export function serializeDevicesPageSearch(args: {
   if (args.category) sp.set("category", args.category);
   if (args.location) sp.set("location", args.location);
   if (args.status) sp.set("status", args.status);
-  const ru = args.reservation_user.trim();
-  if (ru) sp.set("reservation_user", ru);
-  if (args.reservation_from.trim()) sp.set("reservation_from", args.reservation_from.trim());
-  if (args.reservation_to.trim()) sp.set("reservation_to", args.reservation_to.trim());
+  if (args.used_by_me) sp.set("used_by_me", "1");
+  if (args.favorites_only) sp.set("favorites_only", "1");
   if (args.page !== 1) sp.set("page", String(args.page));
   if (args.page_size !== 50) sp.set("page_size", String(args.page_size));
   if (args.view !== "thumbnail") sp.set("view", args.view);

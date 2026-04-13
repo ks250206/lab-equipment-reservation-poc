@@ -6,6 +6,7 @@ from .devices import (
     update_device,
 )
 from .facet_search import (
+    favorite_device_ids_for_user,
     get_all_categories,
     get_all_locations,
     get_facets,
@@ -47,6 +48,7 @@ __all__ = [
     "update_reservation",
     "delete_reservation",
     "check_time_overlap",
+    "favorite_device_ids_for_user",
     "search_devices",
     "search_devices_paginated",
     "get_facets",

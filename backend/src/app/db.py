@@ -36,7 +36,7 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
 
 async def init_db(bind: AsyncEngine | None = None) -> None:
     """メタデータに基づき不足テーブルを作成する。モデルは import 順に依存しない。"""
-    from .models import Device, Reservation, User  # noqa: F401
+    from .models import Device, Reservation, User, UserFavoriteDevice  # noqa: F401
 
     target = bind or engine
     async with target.begin() as conn:

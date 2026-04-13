@@ -2,12 +2,13 @@ import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
 from starlette.responses import Response
 
-from ..auth import get_current_user, require_admin
-from ..config import DeviceStatus, get_settings
+from ..auth import get_current_user, get_optional_current_user, require_admin
+from ..config import DeviceStatus, ReservationStatus, get_settings
 from ..db import get_session
 from ..models import User
 from ..pagination import ListPageSize
@@ -30,6 +31,7 @@ from ..services import (
     get_device as get_device_service,
 )
 from ..services import (
+    favorite_device_ids_for_user,
     get_facets,
     search_devices_paginated,
 )
@@ -54,36 +56,42 @@ async def list_devices(
     q: str | None = Query(None, description="Search query"),
     category: str | None = Query(None, description="Filter by category"),
     location: str | None = Query(None, description="Filter by location"),
-    status: DeviceStatus | None = Query(None, description="Filter by status"),
-    reservation_user: str | None = Query(
-        None, description="予約ユーザーの氏名・メールに部分一致する予約を持つ装置に限定"
-    ),
-    reservation_from: datetime | None = Query(
-        None, description="予約期間フィルタ開始（UTC 解釈）。`reservation_to` と併用"
-    ),
-    reservation_to: datetime | None = Query(
-        None, description="予約期間フィルタ終了（UTC 解釈）。`reservation_from` と併用"
-    ),
+    device_status: DeviceStatus | None = Query(None, alias="status", description="Filter by status"),
+    used_by_me: bool = Query(False, description="ログインユーザーが一度でも予約した装置に限定"),
+    favorites_only: bool = Query(False, description="ログインユーザーがお気に入りの装置に限定"),
     page: int = Query(1, ge=1, description="1 始まりのページ番号"),
     page_size: ListPageSize = Query(
         ListPageSize.FIFTY, description="1 ページあたり件数（20 / 50 / 100）"
     ),
     session: AsyncSession = Depends(get_session),
+    optional_user: User | None = Depends(get_optional_current_user),
 ) -> PaginatedDeviceListResponse:
+    if (used_by_me or favorites_only) and optional_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="used_by_me および favorites_only にはログイン（Authorization: Bearer）が必要です",
+        )
+    personal_id = optional_user.id if optional_user is not None else None
+    need_personal_clause = used_by_me or favorites_only
     items, total = await search_devices_paginated(
         session,
         q=q,
         category=category,
         location=location,
-        status=status,
-        reservation_user=reservation_user,
-        reservation_from=reservation_from,
-        reservation_to=reservation_to,
+        status=device_status,
+        personal_user_id=personal_id if need_personal_clause else None,
+        used_by_me=used_by_me,
+        favorites_only=favorites_only,
         page=page,
         page_size=int(page_size),
     )
+    fav_ids: set[uuid.UUID] = set()
+    if optional_user is not None and items:
+        fav_ids = await favorite_device_ids_for_user(
+            session, optional_user.id, [d.id for d in items]
+        )
     return PaginatedDeviceListResponse(
-        items=[device_to_response(d) for d in items],
+        items=[device_to_response(d, is_favorite=(d.id in fav_ids)) for d in items],
         total=total,
         page=page,
         page_size=int(page_size),
@@ -106,6 +114,10 @@ async def list_device_reservations(
     from_: datetime | None = Query(None, alias="from"),
     to: datetime | None = Query(None),
     include_cancelled: bool = Query(False),
+    mine_only: bool = Query(False, description="ログインユーザーの予約に限定"),
+    reservation_status: ReservationStatus | None = Query(
+        None, description="予約ステータスで絞り込み（指定時は include_cancelled より優先）"
+    ),
     page: int = Query(1, ge=1, description="1 始まりのページ番号"),
     page_size: ListPageSize = Query(
         ListPageSize.FIFTY, description="1 ページあたり件数（20 / 50 / 100）"
@@ -151,6 +163,8 @@ async def list_device_reservations(
         window_start=range_start,
         window_end=range_end,
         include_cancelled=include_cancelled,
+        mine_user_id=current_user.id if mine_only else None,
+        status_filter=reservation_status,
         page=page,
         page_size=int(page_size),
     )
@@ -271,6 +285,7 @@ async def upload_device_image(
 async def get_device(
     device_id: str,
     session: AsyncSession = Depends(get_session),
+    optional_user: User | None = Depends(get_optional_current_user),
 ) -> DeviceResponse:
     try:
         uuid_obj = uuid.UUID(device_id)
@@ -286,7 +301,11 @@ async def get_device(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Device not found",
         )
-    return device_to_response(device)
+    is_fav = False
+    if optional_user is not None:
+        favs = await favorite_device_ids_for_user(session, optional_user.id, [device.id])
+        is_fav = device.id in favs
+    return device_to_response(device, is_favorite=is_fav)
 
 
 @router.post("", response_model=DeviceResponse)

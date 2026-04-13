@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { fetchDevices, fetchFacets } from "@/api/client";
 import type { Device, PageSize } from "@/api/types";
+import { useAuth } from "@/auth/AuthContext";
 import { DeviceImageSlot } from "@/components/device/DeviceImageSlot";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -12,13 +14,13 @@ import {
   serializeDevicesPageSearch,
   type DeviceListViewMode,
 } from "@/lib/devicesPageSearch";
-import { localDatetimeInputToIso } from "@/lib/datetimeLocal";
 import { urlSearchEqual } from "@/lib/urlSearchEqual";
 
 export function DevicesPage() {
   const locationRoute = useLocation();
   const navigate = useNavigate();
   const skipHydrateFromUrl = useRef(false);
+  const { authenticated, ready, getValidToken } = useAuth();
 
   const initial = parseDevicesPageSearch(locationRoute.search);
   const [rawQuery, setRawQuery] = useState(initial.q);
@@ -26,16 +28,19 @@ export function DevicesPage() {
   const [category, setCategory] = useState(initial.category);
   const [location, setLocation] = useState(initial.location);
   const [status, setStatus] = useState(initial.status);
-  const [rawReservationUser, setRawReservationUser] = useState(initial.reservation_user);
-  const [resUserComposition, setResUserComposition] = useState(false);
-  const [reservationFrom, setReservationFrom] = useState(initial.reservation_from);
-  const [reservationTo, setReservationTo] = useState(initial.reservation_to);
+  const [usedByMe, setUsedByMe] = useState(initial.used_by_me);
+  const [favoritesOnly, setFavoritesOnly] = useState(initial.favorites_only);
   const [page, setPage] = useState(initial.page);
   const [pageSize, setPageSize] = useState<PageSize>(initial.page_size);
   const [listView, setListView] = useState<DeviceListViewMode>(initial.view);
 
   const debouncedQuery = useDebouncedValue(rawQuery, composition);
-  const debouncedReservationUser = useDebouncedValue(rawReservationUser, resUserComposition);
+
+  useEffect(() => {
+    if (!ready || authenticated) return;
+    if (usedByMe) setUsedByMe(false);
+    if (favoritesOnly) setFavoritesOnly(false);
+  }, [ready, authenticated, usedByMe, favoritesOnly]);
 
   useEffect(() => {
     if (skipHydrateFromUrl.current) {
@@ -47,9 +52,8 @@ export function DevicesPage() {
     setLocation(p.location);
     setRawQuery(p.q);
     setStatus(p.status);
-    setRawReservationUser(p.reservation_user);
-    setReservationFrom(p.reservation_from);
-    setReservationTo(p.reservation_to);
+    setUsedByMe(p.used_by_me);
+    setFavoritesOnly(p.favorites_only);
     setPage(p.page);
     setPageSize(p.page_size);
     setListView(p.view);
@@ -61,9 +65,8 @@ export function DevicesPage() {
       category,
       location,
       status,
-      reservation_user: debouncedReservationUser,
-      reservation_from: reservationFrom,
-      reservation_to: reservationTo,
+      used_by_me: usedByMe,
+      favorites_only: favoritesOnly,
       page,
       page_size: pageSize,
       view: listView,
@@ -76,9 +79,8 @@ export function DevicesPage() {
     category,
     location,
     status,
-    debouncedReservationUser,
-    reservationFrom,
-    reservationTo,
+    usedByMe,
+    favoritesOnly,
     page,
     pageSize,
     listView,
@@ -89,15 +91,7 @@ export function DevicesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [
-    debouncedQuery,
-    category,
-    location,
-    status,
-    debouncedReservationUser,
-    reservationFrom,
-    reservationTo,
-  ]);
+  }, [debouncedQuery, category, location, status, usedByMe, favoritesOnly]);
 
   useEffect(() => {
     setPage(1);
@@ -108,23 +102,6 @@ export function DevicesPage() {
     queryFn: () => fetchFacets({ q: debouncedQuery || undefined }),
   });
 
-  const reservationPeriodIso = useMemo(() => {
-    const a = reservationFrom.trim();
-    const b = reservationTo.trim();
-    if (!a || !b)
-      return { from: undefined as string | undefined, to: undefined as string | undefined };
-    try {
-      const fromIso = localDatetimeInputToIso(a);
-      const toIso = localDatetimeInputToIso(b);
-      if (new Date(fromIso).getTime() >= new Date(toIso).getTime()) {
-        return { from: undefined, to: undefined };
-      }
-      return { from: fromIso, to: toIso };
-    } catch {
-      return { from: undefined, to: undefined };
-    }
-  }, [reservationFrom, reservationTo]);
-
   const deviceQuery = useQuery({
     queryKey: [
       "devices",
@@ -132,24 +109,30 @@ export function DevicesPage() {
       category,
       location,
       status,
-      debouncedReservationUser,
-      reservationPeriodIso.from,
-      reservationPeriodIso.to,
+      usedByMe,
+      favoritesOnly,
       page,
       pageSize,
+      authenticated,
     ],
-    queryFn: () =>
-      fetchDevices({
-        q: debouncedQuery || undefined,
-        category: category || undefined,
-        location: location || undefined,
-        status: status || undefined,
-        reservation_user: debouncedReservationUser.trim() || undefined,
-        reservation_from: reservationPeriodIso.from,
-        reservation_to: reservationPeriodIso.to,
-        page,
-        page_size: pageSize,
-      }),
+    queryFn: async () => {
+      const token =
+        authenticated && ready ? await getValidToken().catch(() => null) : null;
+      return fetchDevices(
+        {
+          q: debouncedQuery || undefined,
+          category: category || undefined,
+          location: location || undefined,
+          status: status || undefined,
+          used_by_me: usedByMe,
+          favorites_only: favoritesOnly,
+          page,
+          page_size: pageSize,
+        },
+        { accessToken: token },
+      );
+    },
+    enabled: ready,
   });
 
   useEffect(() => {
@@ -168,19 +151,29 @@ export function DevicesPage() {
   );
   const statusOptions = useMemo(() => facetQuery.data?.status ?? [], [facetQuery.data?.status]);
 
+  const personalFiltersDisabled = !authenticated;
+
   const renderDeviceList = (items: Device[]) => {
     if (listView === "list") {
       return (
         <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white shadow-sm">
           {items.map((d) => (
             <li key={d.id} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
-              <div>
-                <Link to={`/devices/${d.id}`} className="font-medium text-blue-800 hover:underline">
-                  {d.name}
-                </Link>
-                <p className="text-xs text-zinc-500">
-                  {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
-                </p>
+              <div className="flex min-w-0 items-baseline gap-2">
+                {d.is_favorite ? (
+                  <Star
+                    className="h-4 w-4 shrink-0 fill-amber-400 text-amber-500"
+                    aria-label="お気に入り"
+                  />
+                ) : null}
+                <div className="min-w-0">
+                  <Link to={`/devices/${d.id}`} className="font-medium text-blue-800 hover:underline">
+                    {d.name}
+                  </Link>
+                  <p className="text-xs text-zinc-500">
+                    {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
+                  </p>
+                </div>
               </div>
             </li>
           ))}
@@ -204,12 +197,20 @@ export function DevicesPage() {
                   className="h-36 w-full shrink-0 sm:h-auto sm:w-44"
                 />
                 <div className="min-w-0 flex-1 space-y-2 text-sm">
-                  <Link
-                    to={`/devices/${d.id}`}
-                    className="text-lg font-medium text-blue-800 hover:underline"
-                  >
-                    {d.name}
-                  </Link>
+                  <div className="flex items-start gap-2">
+                    {d.is_favorite ? (
+                      <Star
+                        className="mt-1 h-5 w-5 shrink-0 fill-amber-400 text-amber-500"
+                        aria-label="お気に入り"
+                      />
+                    ) : null}
+                    <Link
+                      to={`/devices/${d.id}`}
+                      className="text-lg font-medium text-blue-800 hover:underline"
+                    >
+                      {d.name}
+                    </Link>
+                  </div>
                   <p className="text-xs text-zinc-500">
                     {d.category ?? "—"} / {d.location ?? "—"} / {d.status}
                   </p>
@@ -236,12 +237,20 @@ export function DevicesPage() {
               className="aspect-[4/3] w-full"
             />
             <div className="space-y-1 p-3">
-              <Link
-                to={`/devices/${d.id}`}
-                className="line-clamp-2 font-medium text-blue-800 hover:underline"
-              >
-                {d.name}
-              </Link>
+              <div className="flex items-start gap-1.5">
+                {d.is_favorite ? (
+                  <Star
+                    className="mt-0.5 h-4 w-4 shrink-0 fill-amber-400 text-amber-500"
+                    aria-label="お気に入り"
+                  />
+                ) : null}
+                <Link
+                  to={`/devices/${d.id}`}
+                  className="line-clamp-2 font-medium text-blue-800 hover:underline"
+                >
+                  {d.name}
+                </Link>
+              </div>
               <p className="line-clamp-2 text-xs text-zinc-500">
                 {d.category ?? "—"} / {d.location ?? "—"}
               </p>
@@ -347,54 +356,42 @@ export function DevicesPage() {
           </select>
         </label>
 
-        <label className="block space-y-1 md:col-span-2">
-          <span className="text-sm font-medium text-zinc-700">
-            予約ユーザー（氏名・メールの一部）
-          </span>
-          <input
-            type="search"
-            value={rawReservationUser}
-            onChange={(e) => setRawReservationUser(e.target.value)}
-            onCompositionStart={() => setResUserComposition(true)}
-            onCompositionEnd={() => setResUserComposition(false)}
-            placeholder="例: 山田 または メールの一部"
-            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-            autoComplete="off"
-          />
-          <span className="text-xs text-zinc-500">
-            入力確定から 300ms 後に反映します（IME 変換中は待ちます）
-          </span>
-        </label>
-
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-zinc-700">予約が重なる期間・開始</span>
-          <input
-            type="datetime-local"
-            value={reservationFrom}
-            onChange={(e) => setReservationFrom(e.target.value)}
-            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-          />
-        </label>
-
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-zinc-700">予約が重なる期間・終了</span>
-          <input
-            type="datetime-local"
-            value={reservationTo}
-            onChange={(e) => setReservationTo(e.target.value)}
-            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-          />
-          <span className="text-xs text-zinc-500">
-            開始・終了の両方を入れたときだけ期間で絞り込みます。
-          </span>
-        </label>
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <span className="text-sm font-medium text-zinc-700">マイ向け（ログイン時のみ）</span>
+          <div className="flex flex-wrap gap-3">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
+              <input
+                type="checkbox"
+                checked={usedByMe}
+                disabled={personalFiltersDisabled}
+                onChange={(e) => setUsedByMe(e.target.checked)}
+                className="rounded border-zinc-300"
+              />
+              使ったことがある装置のみ
+            </label>
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
+              <input
+                type="checkbox"
+                checked={favoritesOnly}
+                disabled={personalFiltersDisabled}
+                onChange={(e) => setFavoritesOnly(e.target.checked)}
+                className="rounded border-zinc-300"
+              />
+              お気に入りのみ
+            </label>
+          </div>
+          {personalFiltersDisabled ? (
+            <p className="text-xs text-zinc-500">ログインすると利用できます。</p>
+          ) : null}
+        </div>
       </div>
 
       {deviceQuery.isLoading ? (
         <p className="text-sm text-zinc-600">読み込み中…</p>
       ) : deviceQuery.isError ? (
         <p className="text-sm text-red-700">
-          装置一覧を取得できませんでした。バックエンドとプロキシ設定を確認してください。
+          装置一覧を取得できませんでした。
+          {deviceQuery.error instanceof Error ? `（${deviceQuery.error.message}）` : null}
         </p>
       ) : (
         <div className="space-y-3">

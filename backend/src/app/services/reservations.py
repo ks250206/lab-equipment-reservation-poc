@@ -62,6 +62,8 @@ def _reservation_device_window_where(
     window_end: datetime,
     *,
     include_cancelled: bool,
+    mine_user_id: uuid.UUID | None = None,
+    status_filter: ReservationStatus | None = None,
 ) -> tuple[Any, datetime, datetime]:
     """窓と重なる予約行の WHERE 句（`window_start` < `window_end` を前提）。"""
     ws = ensure_utc(window_start)
@@ -71,7 +73,11 @@ def _reservation_device_window_where(
         Reservation.end_time > ws,
         Reservation.start_time < we,
     ]
-    if not include_cancelled:
+    if mine_user_id is not None:
+        conds.append(Reservation.user_id == mine_user_id)
+    if status_filter is not None:
+        conds.append(Reservation.status == status_filter)
+    elif not include_cancelled:
         conds.append(Reservation.status != ReservationStatus.CANCELLED)
     return and_(*conds), ws, we
 
@@ -83,6 +89,8 @@ async def list_reservations_for_device_in_window(
     window_start: datetime,
     window_end: datetime,
     include_cancelled: bool = False,
+    mine_user_id: uuid.UUID | None = None,
+    status_filter: ReservationStatus | None = None,
 ) -> Sequence[Reservation]:
     """装置の予約を時刻窓で取得（窓と重なる行）。`window_start` < `window_end` を前提とする。"""
     where_expr, _ws, _we = _reservation_device_window_where(
@@ -90,6 +98,8 @@ async def list_reservations_for_device_in_window(
         window_start,
         window_end,
         include_cancelled=include_cancelled,
+        mine_user_id=mine_user_id,
+        status_filter=status_filter,
     )
     q = (
         select(Reservation)
@@ -108,6 +118,8 @@ async def list_reservations_for_device_in_window_paginated(
     window_start: datetime,
     window_end: datetime,
     include_cancelled: bool = False,
+    mine_user_id: uuid.UUID | None = None,
+    status_filter: ReservationStatus | None = None,
     page: int,
     page_size: int,
 ) -> tuple[list[Reservation], int]:
@@ -116,6 +128,8 @@ async def list_reservations_for_device_in_window_paginated(
         window_start,
         window_end,
         include_cancelled=include_cancelled,
+        mine_user_id=mine_user_id,
+        status_filter=status_filter,
     )
     count_stmt = select(func.count()).select_from(Reservation).where(where_expr)
     total = int(await session.scalar(count_stmt) or 0)

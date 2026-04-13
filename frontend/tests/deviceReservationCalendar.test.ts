@@ -70,6 +70,8 @@ describe("reservationsToFullCalendarEvents", () => {
       isMine: true,
       tooltipTitle: "10:00–11:00 山田",
     });
+    expect(events[0]?.backgroundColor).toBe("#0d9488");
+    expect(events[0]?.borderColor).toBe("#0f766e");
   });
 
   it("myUserId が一致しないとき isMine は false", () => {
@@ -78,6 +80,8 @@ describe("reservationsToFullCalendarEvents", () => {
       "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     );
     expect(events[0]?.extendedProps).toMatchObject({ isMine: false });
+    expect(events[0]?.backgroundColor).toBe("#64748b");
+    expect(events[0]?.borderColor).toBe("#475569");
   });
 });
 

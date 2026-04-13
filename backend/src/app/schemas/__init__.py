@@ -31,10 +31,11 @@ class DeviceResponse(DeviceBase):
     created_at: datetime
     updated_at: datetime
     has_image: bool = False
+    is_favorite: bool = False
 
 
-def device_to_response(device: object) -> DeviceResponse:
-    """ORM `Device` から `has_image` を埋めてレスポンスを組み立てる。"""
+def device_to_response(device: object, *, is_favorite: bool = False) -> DeviceResponse:
+    """ORM `Device` から `has_image` / `is_favorite` を埋めてレスポンスを組み立てる。"""
     from ..models import Device as DeviceModel
 
     if not isinstance(device, DeviceModel):
@@ -51,6 +52,7 @@ def device_to_response(device: object) -> DeviceResponse:
         created_at=device.created_at,
         updated_at=device.updated_at,
         has_image=device.image_object_key is not None,
+        is_favorite=is_favorite,
     )
 
 

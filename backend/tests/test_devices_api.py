@@ -6,13 +6,14 @@ from datetime import UTC, datetime
 import pytest
 from httpx import ASGITransport, AsyncClient
 from jwt_payload_utils import jwt_like_payload
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.auth import get_current_user, get_token_payload
+from app.auth import get_current_user, get_optional_current_user, get_token_payload
 from app.config import ReservationStatus, settings
 from app.db import Base, get_session
 from app.main import app
-from app.models import Device, Reservation, User
+from app.models import Device, Reservation, User, UserFavoriteDevice
 
 
 @pytest.fixture
@@ -49,9 +50,15 @@ async def devices_client(engine):
                 realm_roles=["app-admin"],
             )
 
+        async def override_get_optional_current_user():
+            row = await shared.get(User, admin.id)
+            assert row is not None
+            return row
+
         app.dependency_overrides[get_session] = override_get_session
         app.dependency_overrides[get_current_user] = override_get_current_user
         app.dependency_overrides[get_token_payload] = override_get_token_payload
+        app.dependency_overrides[get_optional_current_user] = override_get_optional_current_user
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -84,9 +91,33 @@ async def devices_anon_client(engine):
                 realm_roles=["default-roles-master"],
             )
 
+        async def override_get_optional_current_user():
+            row = await shared.get(User, user.id)
+            assert row is not None
+            return row
+
         app.dependency_overrides[get_session] = override_get_session
         app.dependency_overrides[get_current_user] = override_get_current_user
         app.dependency_overrides[get_token_payload] = override_get_token_payload
+        app.dependency_overrides[get_optional_current_user] = override_get_optional_current_user
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            yield client, shared
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def devices_list_public_client(engine):
+    """一覧のみ。個人向けフィルタは JWT なしで optional user が None になる。"""
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as shared:
+
+        async def override_get_session():
+            yield shared
+
+        app.dependency_overrides[get_session] = override_get_session
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -165,7 +196,9 @@ async def test_get_device_by_id(devices_client):
 
     ok = await client.get(f"/api/devices/{d.id}")
     assert ok.status_code == 200
-    assert ok.json()["name"] == "単体"
+    body = ok.json()
+    assert body["name"] == "単体"
+    assert body.get("is_favorite") is False
 
     bad = await client.get("/api/devices/not-uuid")
     assert bad.status_code == 400
@@ -229,81 +262,65 @@ async def test_device_write_requires_admin(devices_anon_client):
 
 
 @pytest.mark.asyncio
-async def test_list_devices_filter_by_reservation_user_and_window(devices_client):
-    client, session = devices_client
-    other = User(
-        keycloak_id="resv-filter-user", name="山田テスト", email="yamada-filter@example.com"
-    )
-    session.add(other)
-    await session.flush()
+async def test_list_devices_personal_filters_require_login(devices_list_public_client):
+    client, _ = devices_list_public_client
+    r = await client.get("/api/devices", params={"used_by_me": "true"})
+    assert r.status_code == 400
+    r2 = await client.get("/api/devices", params={"favorites_only": "true"})
+    assert r2.status_code == 400
 
-    d_match = Device(name="HasRes", category="c1", location="loc-a")
-    d_other = Device(name="NoRes", category="c2", location="loc-b")
-    session.add_all([d_match, d_other])
+
+@pytest.mark.asyncio
+async def test_list_devices_filter_used_by_me_and_favorites(devices_client):
+    client, session = devices_client
+    admin_result = await session.execute(
+        select(User).where(User.keycloak_id == "devices-admin")
+    )
+    admin = admin_result.scalar_one()
+
+    d_used = Device(name="UsedByAdmin", category="c1", location="loc-a")
+    d_unused = Device(name="NeverUsed", category="c2", location="loc-b")
+    d_fav_only = Device(name="FavOnly", category="c3", location="loc-c")
+    session.add_all([d_used, d_unused, d_fav_only])
     await session.flush()
 
     t0 = datetime(2030, 6, 1, 10, 0, tzinfo=UTC)
     t1 = datetime(2030, 6, 1, 11, 0, tzinfo=UTC)
     session.add(
         Reservation(
-            device_id=d_match.id,
-            user_id=other.id,
+            device_id=d_used.id,
+            user_id=admin.id,
             start_time=t0,
             end_time=t1,
             purpose="試験",
             status=ReservationStatus.CONFIRMED,
         )
     )
+    session.add(UserFavoriteDevice(user_id=admin.id, device_id=d_fav_only.id))
     await session.commit()
 
-    match_id = str(d_match.id)
-    other_id = str(d_other.id)
+    used_ids = {row["id"] for row in (await client.get("/api/devices", params={"used_by_me": "true"})).json()["items"]}
+    assert str(d_used.id) in used_ids
+    assert str(d_unused.id) not in used_ids
+    assert str(d_fav_only.id) not in used_ids
 
-    r_user = await client.get("/api/devices", params={"reservation_user": "yamada-filter"})
-    assert r_user.status_code == 200
-    user_ids = {row["id"] for row in r_user.json()["items"]}
-    assert match_id in user_ids
-    assert other_id not in user_ids
+    fav_ids = {
+        row["id"]
+        for row in (await client.get("/api/devices", params={"favorites_only": "true"})).json()["items"]
+    }
+    assert str(d_fav_only.id) in fav_ids
+    assert str(d_used.id) not in fav_ids
 
-    r_nomatch = await client.get(
-        "/api/devices", params={"reservation_user": "存在しない名前_xyz_993311"}
+    combo = await client.get(
+        "/api/devices", params={"used_by_me": "true", "favorites_only": "true"}
     )
-    assert r_nomatch.status_code == 200
-    nomatch_ids = {row["id"] for row in r_nomatch.json()["items"]}
-    assert match_id not in nomatch_ids
+    assert combo.status_code == 200
+    assert combo.json()["total"] == 0
 
-    r_win = await client.get(
-        "/api/devices",
-        params={
-            "reservation_from": "2030-06-01T09:30:00Z",
-            "reservation_to": "2030-06-01T10:30:00Z",
-        },
-    )
-    assert r_win.status_code == 200
-    win_ids = {row["id"] for row in r_win.json()["items"]}
-    assert match_id in win_ids
-    assert other_id not in win_ids
-
-    r_win_miss = await client.get(
-        "/api/devices",
-        params={
-            "reservation_from": "2030-06-02T00:00:00Z",
-            "reservation_to": "2030-06-02T01:00:00Z",
-        },
-    )
-    assert r_win_miss.status_code == 200
-    miss_ids = {row["id"] for row in r_win_miss.json()["items"]}
-    assert match_id not in miss_ids
-
-    r_combo = await client.get(
-        "/api/devices",
-        params={
-            "reservation_user": "yamada-filter",
-            "reservation_from": "2030-06-01T00:00:00Z",
-            "reservation_to": "2030-06-02T00:00:00Z",
-        },
-    )
-    assert r_combo.status_code == 200
-    combo_ids = {row["id"] for row in r_combo.json()["items"]}
-    assert match_id in combo_ids
-    assert other_id not in combo_ids
+    listed = await client.get("/api/devices")
+    assert listed.status_code == 200
+    for row in listed.json()["items"]:
+        if row["id"] == str(d_fav_only.id):
+            assert row["is_favorite"] is True
+        else:
+            assert row["is_favorite"] is False

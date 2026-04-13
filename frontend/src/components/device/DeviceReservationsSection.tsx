@@ -41,6 +41,10 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
   const [queryRange, setQueryRange] = useState(initialCalendarMonthRange);
   const [listPage, setListPage] = useState(1);
   const [listPageSize, setListPageSize] = useState<PageSize>(50);
+  const [listMineOnly, setListMineOnly] = useState(false);
+  const [listReservationStatus, setListReservationStatus] = useState<
+    "" | "confirmed" | "cancelled" | "completed"
+  >("");
   const [modalReservation, setModalReservation] = useState<Reservation | null>(null);
   const [modalEditable, setModalEditable] = useState(false);
   const [createRange, setCreateRange] = useState<DeviceReservationCreateRange | null>(null);
@@ -77,6 +81,10 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
     setListPage(1);
   }, [listPageSize]);
 
+  useEffect(() => {
+    setListPage(1);
+  }, [listMineOnly, listReservationStatus]);
+
   const listReservationsQuery = useQuery({
     queryKey: [
       "device-reservations",
@@ -86,6 +94,8 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
       "list",
       listPage,
       listPageSize,
+      listMineOnly,
+      listReservationStatus,
     ],
     queryFn: async () => {
       const token = await getValidToken();
@@ -97,6 +107,8 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
         to: queryRange.end.toISOString(),
         page: listPage,
         page_size: listPageSize,
+        mineOnly: listMineOnly,
+        reservationStatus: listReservationStatus || undefined,
       });
     },
     enabled: Boolean(deviceId) && authenticated && ready && viewMode === "list",
@@ -225,24 +237,68 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
       </div>
 
       {viewMode === "list" && (
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <button
-            type="button"
-            className="rounded border border-zinc-300 bg-white px-3 py-1 hover:bg-zinc-50"
-            onClick={() => shiftListMonth(-1)}
-          >
-            前月
-          </button>
-          <span className="font-medium text-zinc-700">
-            {format(queryRange.start, "yyyy年 M月", { locale: ja })}
-          </span>
-          <button
-            type="button"
-            className="rounded border border-zinc-300 bg-white px-3 py-1 hover:bg-zinc-50"
-            onClick={() => shiftListMonth(1)}
-          >
-            翌月
-          </button>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium text-zinc-600">リスト表示</span>
+            <button
+              type="button"
+              onClick={() => setListMineOnly(false)}
+              className={
+                !listMineOnly
+                  ? "rounded border border-zinc-800 bg-zinc-800 px-3 py-1 text-xs font-medium text-white"
+                  : "rounded border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+              }
+            >
+              すべて
+            </button>
+            <button
+              type="button"
+              onClick={() => setListMineOnly(true)}
+              className={
+                listMineOnly
+                  ? "rounded border border-teal-800 bg-teal-700 px-3 py-1 text-xs font-medium text-white"
+                  : "rounded border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+              }
+            >
+              自分のみ
+            </button>
+            <label className="inline-flex items-center gap-2 text-xs text-zinc-700">
+              <span className="font-medium">ステータス</span>
+              <select
+                value={listReservationStatus}
+                onChange={(e) =>
+                  setListReservationStatus(
+                    e.target.value as "" | "confirmed" | "cancelled" | "completed",
+                  )
+                }
+                className="rounded border border-zinc-300 bg-white px-2 py-1"
+              >
+                <option value="">（指定なし）</option>
+                <option value="confirmed">確定</option>
+                <option value="cancelled">キャンセル</option>
+                <option value="completed">完了</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <button
+              type="button"
+              className="rounded border border-zinc-300 bg-white px-3 py-1 hover:bg-zinc-50"
+              onClick={() => shiftListMonth(-1)}
+            >
+              前月
+            </button>
+            <span className="font-medium text-zinc-700">
+              {format(queryRange.start, "yyyy年 M月", { locale: ja })}
+            </span>
+            <button
+              type="button"
+              className="rounded border border-zinc-300 bg-white px-3 py-1 hover:bg-zinc-50"
+              onClick={() => shiftListMonth(1)}
+            >
+              翌月
+            </button>
+          </div>
         </div>
       )}
 
@@ -388,7 +444,8 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
       )}
 
       <p className="text-sm text-zinc-600">
-        カレンダー表示中は、空き枠をドラッグしてこの装置の予約を作成できます（既存予約と重なる範囲は選択できません）。
+        カレンダーでは<strong className="font-medium text-teal-800">自分の予約はティール系</strong>
+        、他ユーザーの枠はスレート系で色分けしています。空き枠をドラッグしてこの装置の予約を作成できます（既存予約と重なる範囲は選択できません）。
         取り消しや一覧は{" "}
         <Link to="/reservations" className="text-blue-800 underline">
           予約一覧

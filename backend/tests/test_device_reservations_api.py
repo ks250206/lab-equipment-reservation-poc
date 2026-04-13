@@ -246,3 +246,66 @@ async def test_list_device_reservations_unknown_device_returns_404(device_reserv
         },
     )
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_device_reservations_mine_only_and_status_filter(device_reservations_client):
+    client, session, owner = device_reservations_client
+    other = User(keycloak_id="other-resv-user")
+    session.add(other)
+    await session.flush()
+
+    device = Device(name="絞り込み装置")
+    session.add(device)
+    await session.commit()
+    await session.refresh(device)
+
+    t0 = datetime(2026, 7, 1, 9, 0, tzinfo=UTC)
+    t1 = datetime(2026, 7, 1, 10, 0, tzinfo=UTC)
+    t2 = datetime(2026, 7, 1, 11, 0, tzinfo=UTC)
+    t3 = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
+    session.add_all(
+        [
+            Reservation(
+                device_id=device.id,
+                user_id=owner.id,
+                start_time=t0,
+                end_time=t1,
+                purpose="自分",
+            ),
+            Reservation(
+                device_id=device.id,
+                user_id=other.id,
+                start_time=t2,
+                end_time=t3,
+                purpose="他人",
+            ),
+        ]
+    )
+    await session.commit()
+
+    base_params = {
+        "from": "2026-07-01T00:00:00Z",
+        "to": "2026-07-02T00:00:00Z",
+    }
+    r_all = await client.get(f"/api/devices/{device.id}/reservations", params=base_params)
+    assert r_all.status_code == 200
+    assert r_all.json()["total"] == 2
+
+    r_mine = await client.get(
+        f"/api/devices/{device.id}/reservations",
+        params={**base_params, "mine_only": "true"},
+    )
+    assert r_mine.status_code == 200
+    assert r_mine.json()["total"] == 1
+    assert r_mine.json()["items"][0]["purpose"] == "自分"
+
+    r_cancel = await client.get(
+        f"/api/devices/{device.id}/reservations",
+        params={
+            **base_params,
+            "reservation_status": "cancelled",
+        },
+    )
+    assert r_cancel.status_code == 200
+    assert r_cancel.json()["total"] == 0

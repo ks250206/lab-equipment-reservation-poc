@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { Star } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
-import { fetchDevice, uploadDeviceImage } from "@/api/client";
+import {
+  addDeviceFavorite,
+  fetchDevice,
+  removeDeviceFavorite,
+  uploadDeviceImage,
+} from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 import { DeviceImageSlot } from "@/components/device/DeviceImageSlot";
 import { DeviceReservationsSection } from "@/components/device/DeviceReservationsSection";
@@ -22,9 +28,30 @@ export function DeviceDetailPage() {
   const isAdmin = meQuery.data?.role === "admin";
 
   const q = useQuery({
-    queryKey: ["device", deviceId],
-    queryFn: () => fetchDevice(deviceId!),
-    enabled: Boolean(deviceId),
+    queryKey: ["device", deviceId, authenticated],
+    queryFn: async () => {
+      const token = authenticated && ready ? await getValidToken() : null;
+      return fetchDevice(deviceId!, { accessToken: token });
+    },
+    enabled: Boolean(deviceId) && ready,
+  });
+
+  const favMut = useMutation({
+    mutationFn: async () => {
+      const token = await getValidToken();
+      if (!token) throw new Error("ログインが必要です");
+      if (!deviceId) throw new Error("装置 ID がありません");
+      const fav = q.data?.is_favorite;
+      if (fav) {
+        await removeDeviceFavorite(token, deviceId);
+      } else {
+        await addDeviceFavorite(token, deviceId);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["device", deviceId] });
+      void queryClient.invalidateQueries({ queryKey: ["devices"] });
+    },
   });
 
   const uploadMut = useMutation({
@@ -95,7 +122,33 @@ export function DeviceDetailPage() {
             </li>
           </ol>
         </nav>
-        <h1 className="text-2xl font-semibold">{d.name}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold">{d.name}</h1>
+          {authenticated && ready ? (
+            <button
+              type="button"
+              onClick={() => favMut.mutate()}
+              disabled={favMut.isPending}
+              className="inline-flex items-center gap-1.5 rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+              aria-label={d.is_favorite ? "お気に入りを解除" : "お気に入りに追加"}
+            >
+              <Star
+                className={
+                  d.is_favorite
+                    ? "h-5 w-5 fill-amber-400 text-amber-500"
+                    : "h-5 w-5 text-zinc-400"
+                }
+                aria-hidden
+              />
+              {d.is_favorite ? "お気に入り済み" : "お気に入り"}
+            </button>
+          ) : null}
+        </div>
+        {favMut.isError ? (
+          <p className="text-sm text-red-700">
+            {favMut.error instanceof Error ? favMut.error.message : "お気に入りの更新に失敗しました"}
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">

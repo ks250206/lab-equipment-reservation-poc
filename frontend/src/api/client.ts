@@ -28,35 +28,69 @@ async function parseJson<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function fetchDevices(filters: {
-  q?: string;
-  category?: string;
-  location?: string;
-  status?: string;
-  reservation_user?: string;
-  reservation_from?: string;
-  reservation_to?: string;
-  page?: number;
-  page_size?: PageSize;
-}): Promise<Paginated<Device>> {
+export async function fetchDevices(
+  filters: {
+    q?: string;
+    category?: string;
+    location?: string;
+    status?: string;
+    used_by_me?: boolean;
+    favorites_only?: boolean;
+    page?: number;
+    page_size?: PageSize;
+  },
+  opts?: { accessToken?: string | null },
+): Promise<Paginated<Device>> {
   const params: Record<string, string | undefined> = {
     q: filters.q,
     category: filters.category,
     location: filters.location,
     status: filters.status,
-    reservation_user: filters.reservation_user,
-    reservation_from: filters.reservation_from,
-    reservation_to: filters.reservation_to,
+    ...(filters.used_by_me ? { used_by_me: "true" } : {}),
+    ...(filters.favorites_only ? { favorites_only: "true" } : {}),
     page: filters.page !== undefined ? String(filters.page) : undefined,
     page_size: filters.page_size !== undefined ? String(filters.page_size) : undefined,
   };
-  const res = await fetch(buildUrl("/devices", params));
+  const headers: Record<string, string> = {};
+  if (opts?.accessToken) {
+    headers.Authorization = `Bearer ${opts.accessToken}`;
+  }
+  const res = await fetch(buildUrl("/devices", params), { headers });
   return parseJson<Paginated<Device>>(res);
 }
 
-export async function fetchDevice(deviceId: string): Promise<Device> {
-  const res = await fetch(buildUrl(`/devices/${deviceId}`));
+export async function fetchDevice(
+  deviceId: string,
+  opts?: { accessToken?: string | null },
+): Promise<Device> {
+  const headers: Record<string, string> = {};
+  if (opts?.accessToken) {
+    headers.Authorization = `Bearer ${opts.accessToken}`;
+  }
+  const res = await fetch(buildUrl(`/devices/${deviceId}`), { headers });
   return parseJson<Device>(res);
+}
+
+export async function addDeviceFavorite(token: string, deviceId: string): Promise<void> {
+  const res = await fetch(buildUrl(`/users/me/favorites/${deviceId}`), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+}
+
+export async function removeDeviceFavorite(token: string, deviceId: string): Promise<void> {
+  const res = await fetch(buildUrl(`/users/me/favorites/${deviceId}`), {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
 }
 
 export async function uploadDeviceImage(
@@ -128,6 +162,8 @@ export async function fetchDeviceReservations(
     from: string;
     to: string;
     includeCancelled?: boolean;
+    mineOnly?: boolean;
+    reservationStatus?: string;
     page?: number;
     page_size?: PageSize;
   },
@@ -137,6 +173,8 @@ export async function fetchDeviceReservations(
       from: opts.from,
       to: opts.to,
       ...(opts.includeCancelled ? { include_cancelled: "true" } : {}),
+      ...(opts.mineOnly ? { mine_only: "true" } : {}),
+      ...(opts.reservationStatus ? { reservation_status: opts.reservationStatus } : {}),
       ...(opts.page !== undefined ? { page: String(opts.page) } : {}),
       ...(opts.page_size !== undefined ? { page_size: String(opts.page_size) } : {}),
     }),

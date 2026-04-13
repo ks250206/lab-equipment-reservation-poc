@@ -28,19 +28,30 @@ export function reservationCalendarTooltipTitle(r: Reservation): string {
   return `${reservationTimeRangeLabel(r)} ${reservationDisplayName(r)}`;
 }
 
+const CAL_EVENT_BG_MINE = "#0d9488";
+const CAL_EVENT_BORDER_MINE = "#0f766e";
+const CAL_EVENT_BG_OTHER = "#64748b";
+const CAL_EVENT_BORDER_OTHER = "#475569";
+
 export function reservationsToFullCalendarEvents(
   reservations: Reservation[],
   myUserId?: string,
 ): EventInput[] {
-  return reservations.map((r) => ({
-    id: r.id,
-    title: reservationDisplayName(r),
-    start: r.start_time,
-    end: r.end_time,
-    extendedProps: {
-      reservation: r,
-      isMine: myUserId !== undefined && r.user_id === myUserId,
-      tooltipTitle: reservationCalendarTooltipTitle(r),
-    } as DeviceReservationCalendarExtendedProps,
-  }));
+  return reservations.map((r) => {
+    const isMine = myUserId !== undefined && r.user_id === myUserId;
+    return {
+      id: r.id,
+      title: reservationDisplayName(r),
+      start: r.start_time,
+      end: r.end_time,
+      backgroundColor: isMine ? CAL_EVENT_BG_MINE : CAL_EVENT_BG_OTHER,
+      borderColor: isMine ? CAL_EVENT_BORDER_MINE : CAL_EVENT_BORDER_OTHER,
+      textColor: "#ffffff",
+      extendedProps: {
+        reservation: r,
+        isMine,
+        tooltipTitle: reservationCalendarTooltipTitle(r),
+      } as DeviceReservationCalendarExtendedProps,
+    };
+  });
 }

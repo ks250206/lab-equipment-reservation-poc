@@ -12,6 +12,7 @@ from .db import get_session
 from .models import User
 
 security = HTTPBearer()
+optional_http_bearer = HTTPBearer(auto_error=False)
 
 
 def _access_token_allows_client(payload: dict, client_id: str) -> bool:
@@ -191,6 +192,17 @@ async def get_current_user(
     payload: dict = Depends(get_token_payload),
     session: AsyncSession = Depends(get_session),
 ) -> User:
+    return await get_or_create_user_from_payload(session, payload)
+
+
+async def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_http_bearer),
+    session: AsyncSession = Depends(get_session),
+) -> User | None:
+    """`Authorization` があるときだけ JWT を検証しユーザーを返す（装置一覧の個人向けフィルタ等）。"""
+    if credentials is None:
+        return None
+    payload = await decode_token(credentials.credentials)
     return await get_or_create_user_from_payload(session, payload)
 
 

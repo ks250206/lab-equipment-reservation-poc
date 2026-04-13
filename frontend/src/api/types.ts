@@ -17,6 +17,7 @@ export type Device = {
   created_at: string;
   updated_at: string;
   has_image: boolean;
+  is_favorite?: boolean;
 };
 
 export type Reservation = {

@@ -25,6 +25,24 @@ class User(Base):
     reservations: Mapped[list["Reservation"]] = relationship("Reservation", back_populates="user")
 
 
+class UserFavoriteDevice(Base):
+    """ログインユーザーが装置をお気に入りにした行（複合主キー）。"""
+
+    __tablename__ = "user_favorite_devices"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    device_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("devices.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+
+
 class Device(Base):
     __tablename__ = "devices"
 
