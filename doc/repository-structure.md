@@ -12,6 +12,7 @@ personal_space/
 ├── README.md              # 人間向け: 概要・起動手順
 ├── doc/                   # 恒久的設計ドキュメント（@doc/ で参照）
 ├── flake.nix
+├── Justfile               # just: 依存起動・dev サーバ・品質チェック
 ├── .env                   # gitignore（ローカル秘密）
 ├── .env.example
 ├── docker-compose.yml

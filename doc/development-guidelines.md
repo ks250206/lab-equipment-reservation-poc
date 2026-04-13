@@ -62,6 +62,24 @@ pnpm run test
 
 **フィードバックループ**: いずれかが失敗したらコードを直し、**同じチェーンを再度**実行する。リファクタ後も同様に再度 format → lint → test を通す。
 
+## 5.2 `just`（タスクランナー）
+
+ルートの [Justfile](../Justfile) で、依存コンテナの起動・停止、初回セットアップ、開発サーバ、品質チェックを短いコマンドにまとめている。`just` 実行ファイルは **Nix flake の devShell** に含める（`nix develop` 後に `just --list` で確認）。
+
+| 用途 | コマンド例 |
+|------|------------|
+| レシピ一覧 | `just --list` |
+| 依存サービス起動 / 停止 | `just deps-up` / `just deps-down` |
+| Podman 利用時 | `export DEV_CONTAINER_RUNTIME=podman` のあと `just deps-up` 等 |
+| 初回セットアップ | `just setup` |
+| バックエンド開発 | `just backend-dev` |
+| フロント開発 | `just frontend-dev` |
+| バックエンド品質ループ | `just backend-check`（format → lint → test → ty）。`pytest` は DB 起動後（例: `just deps-up`）を前提 |
+| フロント品質ループ | `just frontend-check` |
+| 両方 | `just check` |
+
+詳細は [README.md](../README.md) の起動方法を参照する。
+
 ## 6. フロントエンド仕様（実装時）
 
 - 日本語入力向け **デバウンス 300ms**。
@@ -78,6 +96,7 @@ pnpm run test
 5. 予約 CRUD  
 6. フロントエンド UI + 認証フロー  
 7. リファクタリング・カバレッジ確認  
+8. タスクランナー（`just`、Nix devShell）  
 
 ## 8. ドキュメント更新の責務
 

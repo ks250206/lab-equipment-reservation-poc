@@ -49,6 +49,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 5. 予約機能 | `it5-reservation` | 完了 |
 | 6. フロントエンド | `it6-frontend` | 完了 |
 | 7. リファクタリング | `it7-refactor` | 完了 |
+| 8. タスクランナー（just） | `it8-just` | 完了 |
 
 ---
 

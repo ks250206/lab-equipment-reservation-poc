@@ -17,22 +17,42 @@
 
 ## 起動方法
 
-### 1. 依存サービス起動
+### クイックスタート（Nix + just）
+
+`just` は [flake.nix](flake.nix) の devShell で提供されます。
 
 ```bash
 cd personal_space
-podman-compose up -d
-# または docker-compose up (podman compatibility mode)
+nix develop          # シェルに just / uv / Node 等が入る
+just setup           # .env の雛形、uv sync、pnpm install（初回・環境変化時）
+just deps-up         # PostgreSQL + Keycloak（既定: docker compose）
+# Podman の場合: export DEV_CONTAINER_RUNTIME=podman
+just backend-dev     # 別ターミナル推奨
+just frontend-dev    # http://localhost:5173
 ```
 
-### 2. Nix 開発環境に入る
+依存コンテナの停止: `just deps-down`。利用可能なレシピ一覧: `just` または `just --list`。
+
+`just backend-check` の `pytest` は **PostgreSQL が起動していること**（`just deps-up` 済み、`.env` の `DATABASE_URL` が妥当）を前提とする。
+
+### 手動での起動（just を使わない場合）
+
+#### 1. 依存サービス起動
+
+```bash
+cd personal_space
+docker compose -f docker-compose.yml up -d
+# または: podman-compose -f docker-compose.yml up -d
+```
+
+#### 2. Nix 開発環境に入る
 
 ```bash
 cd personal_space
 nix develop
 ```
 
-### 3. バックエンド起動
+#### 3. バックエンド起動
 
 ```bash
 cd backend
@@ -40,7 +60,7 @@ uv sync
 uv run fastapi dev
 ```
 
-### 4. フロントエンド起動
+#### 4. フロントエンド起動
 
 ```bash
 cd frontend
@@ -91,7 +111,8 @@ personal_space/
 ├── AGENTS.md          # AI 向け必須ルール
 ├── doc/               # 恒久的ドキュメント（要求・設計・アーキテクチャ等）
 ├── README.md          # このファイル
-├── flake.nix          # Nix 環境定義
+├── Justfile           # just タスクランナー（起動・品質チェック）
+├── flake.nix          # Nix 環境定義（just / uv / podman-compose 等）
 ├── docker-compose.yml # Keycloak + PostgreSQL
 ├── steering/          # イテレーション作業（README と iterations/）
 ├── backend/           # FastAPI

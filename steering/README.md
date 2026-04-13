@@ -9,7 +9,7 @@
 | [planning/initial-plan.md](planning/initial-plan.md) | PoC 全体の初期メモ（ロードマップの種） |
 | `iterations/it-NN-<slug>/` | 各イテレーションの作業単位（下記 3 ファイル） |
 
-`NN` は `AGENTS.md` のイテレーション一覧と同じ番号（01–07）。`<slug>` は短い **kebab-case の英語**（例: `database-auth`）。
+`NN` は `AGENTS.md` のイテレーション一覧と同じ番号（例: 01–08）。`<slug>` は短い **kebab-case の英語**（例: `database-auth`）。
 
 ## 各イテレーションで揃える 3 ファイル
 
@@ -32,5 +32,6 @@
 | 5 | `iterations/it-05-reservation/` | 予約機能 |
 | 6 | `iterations/it-06-frontend/` | フロントエンド |
 | 7 | `iterations/it-07-refactor/` | リファクタリング |
+| 8 | `iterations/it-08-just-runner/` | タスクランナー（just） |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。
