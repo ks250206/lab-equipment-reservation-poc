@@ -1,0 +1,27 @@
+# 環境・秘密
+.env
+.env.local
+frontend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+frontend/dist/
+
+# エディタ・OS
+.DS_Store
+.idea/
+*.swp
