@@ -1,4 +1,4 @@
-import type { DatesSetArg, EventClickArg } from "@fullcalendar/core";
+import type { DateSelectArg, DatesSetArg, EventClickArg } from "@fullcalendar/core";
 import jaLocale from "@fullcalendar/core/locales/ja.js";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -14,8 +14,13 @@ import { fetchDeviceReservations, fetchDeviceReservationsAllInRange } from "@/ap
 import type { PageSize, Reservation } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 import { ListPaginationBar } from "@/components/ListPaginationBar";
+import {
+  DeviceReservationSlotCreateDialog,
+  type DeviceReservationCreateRange,
+} from "@/components/device/DeviceReservationSlotCreateDialog";
 import { ReservationDetailDialog } from "@/components/device/ReservationDetailDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { assertFcSelectRangeValid } from "@/lib/fullCalendarSelection";
 import {
   reservationsToFullCalendarEvents,
   type DeviceReservationCalendarExtendedProps,
@@ -37,6 +42,7 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
   const [listPageSize, setListPageSize] = useState<PageSize>(50);
   const [modalReservation, setModalReservation] = useState<Reservation | null>(null);
   const [modalEditable, setModalEditable] = useState(false);
+  const [createRange, setCreateRange] = useState<DeviceReservationCreateRange | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
 
   const onDatesSet = useCallback((arg: DatesSetArg) => {
@@ -135,6 +141,20 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
     arg.jsEvent.preventDefault();
     setModalReservation(ext.reservation);
     setModalEditable(Boolean(ext.isMine));
+  }, []);
+
+  const onSelect = useCallback((selectInfo: DateSelectArg) => {
+    selectInfo.view.calendar.unselect();
+    try {
+      assertFcSelectRangeValid(selectInfo.start, selectInfo.end);
+    } catch {
+      return;
+    }
+    setCreateRange({
+      start: selectInfo.start,
+      end: selectInfo.end,
+      allDay: selectInfo.allDay,
+    });
   }, []);
 
   const shiftListMonth = (delta: number) => {
@@ -331,7 +351,10 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
             }}
             height="auto"
             editable={false}
-            selectable={false}
+            selectable
+            selectMirror
+            selectOverlap={false}
+            select={onSelect}
             eventDisplay="block"
             slotEventOverlap={false}
           />
@@ -339,12 +362,25 @@ export function DeviceReservationsSection({ deviceId }: { deviceId: string }) {
       )}
 
       <p className="text-sm text-zinc-600">
-        予約の作成・取り消しは{" "}
+        カレンダー表示中は、空き枠をドラッグしてこの装置の予約を作成できます（既存予約と重なる範囲は選択できません）。
+        取り消しや一覧は{" "}
         <Link to="/reservations" className="text-blue-800 underline">
           予約一覧
         </Link>
         から行えます。
       </p>
+
+      <DeviceReservationSlotCreateDialog
+        open={createRange !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setCreateRange(null);
+          }
+        }}
+        deviceId={deviceId}
+        range={createRange}
+        getValidToken={getValidToken}
+      />
 
       <ReservationDetailDialog
         open={modalReservation !== null}

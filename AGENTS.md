@@ -61,6 +61,7 @@ Markdown リンクとして開く場合は次の一覧のパスを使う。
 | 14. 装置一覧・装置予約リストのページネーション（シード予約拡充） | `it14-list-pagination` | 完了 |
 | 15. 予約リストのユーザー表示（DB プロフィール）とシード日付の 2 か月分散 | `it15-reservation-user-profile-seed` | 完了 |
 | 16. リスト上ページネーション・カレンダー（時刻+氏名・月省略）・予約詳細モーダル | `it16-reservation-calendar-modal` | 完了 |
+| 17. 装置カレンダーのドラッグで予約作成 | `it17-device-calendar-drag-reservation` | 完了 |
 
 ---
 
