@@ -25,9 +25,11 @@
 cd personal_space
 nix develop          # シェルに just / uv / Node 等が入る
 just setup           # .env の雛形、uv sync、pnpm install（初回・環境変化時）
-just deps-up         # PostgreSQL + Keycloak（既定: podman-compose）
+just deps-up         # Postgres + Keycloak（compose 重ね: 既定は開発プロファイル）
 # Docker の場合: export DEV_CONTAINER_RUNTIME=docker
+# Keycloak を Postgres 永続に: export PERSISTENCE_PROFILE=production（下記参照）
 just backend-dev     # 別ターミナル推奨
+just seed-dev        # 開発 DB に装置・ユーザー（ENVIRONMENT=development のみ）
 just frontend-dev    # http://localhost:5173
 ```
 
@@ -50,9 +52,10 @@ just frontend-dev    # http://localhost:5173
 
 ```bash
 cd personal_space
-podman-compose -f docker-compose.yml up -d
-# または: just deps-up（同じく Podman 既定）
-# Docker のみ使う場合: export DEV_CONTAINER_RUNTIME=docker && just deps-up
+just deps-up
+# 手動の場合（開発プロファイル＝既定）:
+#   bash scripts/compose.sh up -d
+# Docker 利用時: export DEV_CONTAINER_RUNTIME=docker
 ```
 
 #### 2. Nix 開発環境に入る
@@ -114,6 +117,25 @@ cp .env.example .env
 cp frontend/.env.example frontend/.env
 ```
 
+## 永続化プロファイル（アプリ DB と Keycloak）
+
+| レイヤー | 開発（既定） | 本番相当（`PERSISTENCE_PROFILE=production`） |
+|----------|--------------|-----------------------------------------------|
+| **アプリ DB**（装置・予約・`users` テーブル） | `DATABASE_URL` の Postgres（`docker-compose.yml` の `postgres`） | **同じく**接続先 URL を環境ごとに変える（クラウド RDS 等も可） |
+| **Keycloak**（レルム・クライアント・ログインユーザ） | `KC_DB=dev-file`（コンテナ内。アプリ用 Postgres とは**別**） | `KC_DB=postgres` で **同一 Postgres サーバ上の `keycloak` DB** に保存（`docker/postgres/init/01-keycloak.sql` で DB 作成。初回ボリューム作成時のみ実行） |
+
+- Keycloak は **アプリ DB とは独立**したストアですが、`production` プロファイルでは **Postgres に JDBC 接続**します（「DB 依存」と言えるのはこの意味）。
+- 既存の Postgres ボリュームを流用しつつ **初めて production プロファイルにする**場合、`keycloak` ロール／DB が無いと Keycloak が起動に失敗します。そのときは DB に手動で `01-keycloak.sql` と同等の SQL を流すか、**開発用データ消去可なら** Postgres ボリュームを作り直してください。
+
+### 開発シード（装置・ユーザー）
+
+`ENVIRONMENT=development` のときのみ、`just seed-dev`（内部は `python -m app.seeding`）で以下を **冪等 upsert** します。
+
+- **装置** 11 カテゴリ（XRD, XRF, XPS, 充放電装置, TG-DTA, グローブボックス, SEM, 3Dプリンタ, 蒸着装置, スパッタ装置, イオンミリング装置）× 3 台＝33 件（場所・ステータスにバリエーション）
+- **ユーザー** 8 名（日本人名のダミー。1 名は管理者ロール。`keycloak_id` は `seed-...` 接頭辞）
+
+本番（`ENVIRONMENT=production`）ではシードは拒否されます。
+
 ## ディレクトリ構成
 
 ```
@@ -122,9 +144,12 @@ personal_space/
 ├── doc/               # 恒久的ドキュメント（要求・設計・アーキテクチャ等）
 ├── README.md          # このファイル
 ├── Justfile           # just タスクランナー（起動・品質チェック）
-├── scripts/           # compose 実行ラッパー等（just から呼ぶ）
+├── scripts/           # compose.sh（Podman/Docker・永続プロファイル）
+├── docker/            # Postgres init SQL 等
 ├── flake.nix          # Nix 環境定義（just / uv / podman-compose 等）
-├── docker-compose.yml # Keycloak + PostgreSQL
+├── docker-compose.yml        # Postgres（共通）
+├── docker-compose.dev.yml    # + Keycloak dev-file（開発既定）
+├── docker-compose.prod.yml   # + Keycloak→Postgres keycloak DB（本番相当）
 ├── steering/          # イテレーション作業（README と iterations/）
 ├── backend/           # FastAPI
 └── frontend/          # React

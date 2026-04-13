@@ -44,7 +44,7 @@
 cd backend
 uv run ruff format src tests
 uv run ruff check src tests
-uv run pytest tests/
+uv run --extra test pytest tests/
 ```
 
 型チェックをプロジェクトで採用している場合は `uv run ty check src/` も実行する（失敗時は修正ループに含める）。
@@ -75,6 +75,8 @@ pnpm run test
 | バックエンド開発 | `just backend-dev` |
 | フロント開発 | `just frontend-dev` |
 | 8000 番ポートの解放（開発サーバの取り残し） | `just backend-free-port`（macOS / Linux、`lsof` 利用） |
+| 開発シード（装置・ユーザー） | `just seed-dev`（`ENVIRONMENT=development` のみ） |
+| 本番相当 compose（Keycloak→Postgres） | `PERSISTENCE_PROFILE=production just deps-up` 等（[README.md](../README.md)） |
 | バックエンド品質ループ | `just backend-check`（format → lint → test → ty）。`pytest` は DB 起動後（例: `just deps-up`）を前提 |
 | フロント品質ループ | `just frontend-check` |
 | 両方 | `just check` |
@@ -98,6 +100,7 @@ pnpm run test
 6. フロントエンド UI + 認証フロー  
 7. リファクタリング・カバレッジ確認  
 8. タスクランナー（`just`、Nix devShell）  
+9. 永続化プロファイル切替・開発シード  
 
 ## 8. ドキュメント更新の責務
 

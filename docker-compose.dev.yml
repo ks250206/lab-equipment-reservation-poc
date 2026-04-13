@@ -1,0 +1,20 @@
+# 開発: Keycloak は組み込み dev-file（アプリ DB の Postgres とは別層）
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: device-reservation-keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-file
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

@@ -33,5 +33,6 @@
 | 6 | `iterations/it-06-frontend/` | フロントエンド |
 | 7 | `iterations/it-07-refactor/` | リファクタリング |
 | 8 | `iterations/it-08-just-runner/` | タスクランナー（just） |
+| 9 | `iterations/it-09-persistence-seed/` | 永続化プロファイル・開発シード |
 
 旧来ルート直下の `01_*.md` 形式は廃止し、内容は必要に応じて各 `work_report.md` / `todo.md` に取り込んだ。

@@ -13,10 +13,13 @@ personal_space/
 ├── doc/                   # 恒久的設計ドキュメント（@doc/ で参照）
 ├── flake.nix
 ├── Justfile               # just: 依存起動・dev サーバ・品質チェック
-├── scripts/               # 例: compose.sh（Podman/Docker 切替）
+├── scripts/               # compose.sh（永続プロファイル含む）
+├── docker/                # Postgres init（keycloak DB 等）
 ├── .env                   # gitignore（ローカル秘密）
 ├── .env.example
 ├── docker-compose.yml
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
 ├── steering/              # イテレーション作業（iterations/ 参照。設計SSOTではない）
 ├── backend/               # FastAPI
 └── frontend/              # React + Vite

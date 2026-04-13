@@ -59,6 +59,11 @@ Client (Browser) ─JWT─> Keycloak (:8080) ─JWT─> FastAPI (:8000) ─async
 
 ER 図は PoC では省略するが、上記 FK 関係を正とする。
 
+### 2.1 開発シード（PoC）
+
+- `ENVIRONMENT=development` のときのみ、`just seed-dev`（`python -m app.seeding`）で **装置・ユーザー** を冪等に投入できる（詳細は [README.md](../README.md)）。
+- シードの `users.keycloak_id` は `seed-` 接頭辞のダミー値であり、本番 Keycloak の `sub` とは別物である（JWT ログインで初めて作られるユーザー行と併存し得る）。
+
 ## 3. API 設計
 
 ### 3.1 装置 API

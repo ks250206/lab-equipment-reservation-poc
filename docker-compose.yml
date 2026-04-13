@@ -1,3 +1,7 @@
+# アプリ用 PostgreSQL（全プロファイル共通）
+# Keycloak は docker-compose.dev.yml / docker-compose.prod.yml で重ねる。
+# 切替: PERSISTENCE_PROFILE=development（既定）| production（scripts/compose.sh）
+
 services:
   postgres:
     image: postgres:16
@@ -10,29 +14,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dev_user -d device_reservation"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0.0
-    container_name: device-reservation-keycloak
-    command: start-dev
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: dev-file
-    ports:
-      - "8080:8080"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
 volumes:
   postgres_data:
-
-# Podman compatibility

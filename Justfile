@@ -1,9 +1,9 @@
 # 室内装置予約 PoC — タスクランナー
 # `just` は flake の devShell に含める（`nix develop` 後に利用可能）。
 #
-# 依存コンテナ（PostgreSQL / Keycloak）:
-#   既定は Podman（`podman-compose`）。実体は scripts/compose.sh。
-#   Docker に切り替える場合は `export DEV_CONTAINER_RUNTIME=docker`。
+# 依存コンテナ（PostgreSQL / Keycloak）: scripts/compose.sh（Podman 既定）
+#   DEV_CONTAINER_RUNTIME=docker … Docker 系
+#   PERSISTENCE_PROFILE=development（既定）| production … compose 重ね合わせ
 
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
@@ -79,6 +79,10 @@ backend-dev:
 	cd "{{root}}/backend" && uv run fastapi dev
 
 [group('dev')]
+seed-dev:
+	cd "{{root}}/backend" && PYTHONPATH=src uv run python -m app.seeding
+
+[group('dev')]
 frontend-dev:
 	cd "{{root}}/frontend" && pnpm dev
 
@@ -98,7 +102,7 @@ backend-ty:
 
 [group('check')]
 backend-test:
-	cd "{{root}}/backend" && uv run pytest tests/
+	cd "{{root}}/backend" && uv run --extra test pytest tests/
 
 [group('check')]
 backend-check: backend-fmt backend-lint backend-test backend-ty
